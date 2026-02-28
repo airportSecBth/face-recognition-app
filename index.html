@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Face Recognition App</title>
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+</head>
+<body>
+
+<h2>Face Recognition App</h2>
+
+<input type="text" id="nama" placeholder="Masukkan Nama">
+<br><br>
+
+<video id="video" width="320" height="240" autoplay muted></video>
+<br><br>
+
+<button onclick="enroll()">Tambah Wajah</button>
+<button onclick="verify()">Verifikasi Wajah</button>
+
+<script>
+
+const video = document.getElementById("video");
+const GAS_URL = "ISI_URL_WEB_APP_GAS_KAMU";
+const MODEL_URL = "./models";
+
+navigator.mediaDevices.getUserMedia({ video: {} })
+.then(stream => video.srcObject = stream);
+
+async function loadModels() {
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+}
+
+loadModels();
+
+async function getDescriptor() {
+  const detection = await faceapi
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+
+  if (!detection) {
+    alert("Wajah tidak terdeteksi");
+    return null;
+  }
+
+  return Array.from(detection.descriptor);
+}
+
+async function enroll() {
+
+  const nama = document.getElementById("nama").value;
+  if (!nama) {
+    alert("Isi nama dulu");
+    return;
+  }
+
+  const descriptor = await getDescriptor();
+  if (!descriptor) return;
+
+  fetch(GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mode: "enroll",
+      nama: nama,
+      descriptor: descriptor
+    })
+  })
+  .then(res => res.text())
+  .then(msg => alert(msg));
+}
+
+function euclideanDistance(d1, d2) {
+  let sum = 0;
+  for (let i = 0; i < d1.length; i++) {
+    sum += Math.pow(d1[i] - d2[i], 2);
+  }
+  return Math.sqrt(sum);
+}
+
+async function verify() {
+
+  const descriptor = await getDescriptor();
+  if (!descriptor) return;
+
+  const response = await fetch(GAS_URL);
+  const database = await response.json();
+
+  let bestMatch = null;
+  let minDistance = 999;
+
+  database.forEach(user => {
+    const distance = euclideanDistance(descriptor, user.descriptor);
+    if (distance < minDistance) {
+      minDistance = distance;
+      bestMatch = user.nama;
+    }
+  });
+
+  if (minDistance < 0.6) {
+    alert("MATCH dengan: " + bestMatch);
+  } else {
+    alert("Tidak dikenali");
+  }
+}
+
+</script>
+</body>
+</html>
