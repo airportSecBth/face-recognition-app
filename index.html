@@ -2,58 +2,177 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Face Recognition App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Face Recognition Pro</title>
+
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+<style>
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  background:#0f172a;
+  font-family:Arial, sans-serif;
+  color:white;
+  display:flex;
+  justify-content:center;
+}
+
+.app{
+  width:100%;
+  max-width:500px;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+.header{
+  padding:20px;
+  text-align:center;
+  font-size:22px;
+  font-weight:bold;
+}
+
+.video-wrapper{
+  position:relative;
+  flex:1;
+  padding:15px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+video{
+  width:100%;
+  border-radius:20px;
+  background:black;
+}
+
+.face-frame{
+  position:absolute;
+  width:220px;
+  height:280px;
+  border:3px solid #00e5ff;
+  border-radius:20px;
+  pointer-events:none;
+  box-shadow:0 0 25px #00e5ff;
+}
+
+.controls{
+  padding:20px;
+  background:#111827;
+  border-top-left-radius:25px;
+  border-top-right-radius:25px;
+}
+
+input{
+  width:100%;
+  padding:15px;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  margin-bottom:15px;
+}
+
+button{
+  width:100%;
+  padding:16px;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  font-weight:bold;
+  margin-bottom:10px;
+  cursor:pointer;
+}
+
+.enroll{background:#00c853;color:white;}
+.verify{background:#2962ff;color:white;}
+
+.status{
+  text-align:center;
+  margin-top:10px;
+  font-weight:bold;
+  min-height:24px;
+}
+</style>
 </head>
+
 <body>
 
-<h2>Face Recognition App</h2>
+<div class="app">
 
-<input type="text" id="nama" placeholder="Masukkan Nama">
-<br><br>
+  <div class="header">Face Recognition Pro</div>
 
-<video id="video" width="320" height="240" autoplay muted></video>
-<br><br>
+  <div class="video-wrapper">
+    <video id="video" autoplay muted playsinline></video>
+    <div class="face-frame"></div>
+  </div>
 
-<button onclick="enroll()">Tambah Wajah</button>
-<button onclick="verify()">Verifikasi Wajah</button>
+  <div class="controls">
+    <input type="text" id="nama" placeholder="Masukkan Nama">
+    <button class="enroll" onclick="enroll()">Tambah Wajah</button>
+    <button class="verify" onclick="verify()">Verifikasi</button>
+    <div class="status" id="status">Loading model...</div>
+  </div>
+
+</div>
 
 <script>
 
 const video = document.getElementById("video");
+const statusText = document.getElementById("status");
+
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL = "./models";
 
-navigator.mediaDevices.getUserMedia({ video: {} })
-.then(stream => video.srcObject = stream);
+/* ================= CAMERA ================= */
 
-async function loadModels() {
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+.then(stream => {
+  video.srcObject = stream;
+})
+.catch(() => {
+  statusText.innerText = "Kamera tidak bisa diakses";
+});
+
+/* ================= LOAD MODELS ================= */
+
+async function loadModels(){
   await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
   await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
   await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+  statusText.innerText = "Siap digunakan";
 }
 
 loadModels();
 
-async function getDescriptor() {
+/* ================= GET DESCRIPTOR ================= */
+
+async function getDescriptor(){
+
+  statusText.innerText = "Mendeteksi wajah...";
+
   const detection = await faceapi
     .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
     .withFaceLandmarks()
     .withFaceDescriptor();
 
   if (!detection) {
-    alert("Wajah tidak terdeteksi");
+    statusText.innerText = "Wajah tidak terdeteksi";
     return null;
   }
 
   return Array.from(detection.descriptor);
 }
 
-async function enroll() {
+/* ================= ENROLL ================= */
+
+async function enroll(){
 
   const nama = document.getElementById("nama").value;
   if (!nama) {
-    alert("Isi nama dulu");
+    statusText.innerText = "Isi nama dulu";
     return;
   }
 
@@ -68,44 +187,73 @@ async function enroll() {
       nama: nama,
       descriptor: descriptor
     })
-  })
-  .then(() => alert("Data terkirim"));
+  });
+
+  statusText.innerText = "Data terkirim";
 }
 
-function euclideanDistance(d1, d2) {
+/* ================= DISTANCE ================= */
+
+function euclideanDistance(d1, d2){
   let sum = 0;
-  for (let i = 0; i < d1.length; i++) {
+  for(let i=0;i<d1.length;i++){
     sum += Math.pow(d1[i] - d2[i], 2);
   }
   return Math.sqrt(sum);
 }
 
-async function verify() {
+/* ================= VERIFY ================= */
+
+async function verify(){
 
   const descriptor = await getDescriptor();
   if (!descriptor) return;
 
-  const response = await fetch(GAS_URL);
-  const database = await response.json();
+  let response;
+
+  try{
+    response = await fetch(GAS_URL);
+  }catch{
+    statusText.innerText = "Gagal koneksi server";
+    return;
+  }
+
+  let database;
+
+  try{
+    database = await response.json();
+  }catch{
+    statusText.innerText = "Response bukan JSON valid";
+    return;
+  }
+
+  if (!Array.isArray(database) || database.length === 0){
+    statusText.innerText = "Database kosong";
+    return;
+  }
 
   let bestMatch = null;
   let minDistance = 999;
 
   database.forEach(user => {
+    if (!user.descriptor) return;
+
     const distance = euclideanDistance(descriptor, user.descriptor);
-    if (distance < minDistance) {
+
+    if (distance < minDistance){
       minDistance = distance;
       bestMatch = user.nama;
     }
   });
 
-  if (minDistance < 0.6) {
-    alert("MATCH dengan: " + bestMatch);
+  if (minDistance < 0.6){
+    statusText.innerText = "MATCH: " + bestMatch;
   } else {
-    alert("Tidak dikenali");
+    statusText.innerText = "Tidak dikenali";
   }
 }
 
 </script>
+
 </body>
 </html>
