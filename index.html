@@ -2,110 +2,242 @@
 <html>
 <head>
 <meta charset="UTF-8">
+
+<!-- MOBILE OPTIMIZED -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
 <title>Face Recognition App</title>
+
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+html,body{
+  margin:0;
+  padding:0;
+  background:#0f172a;
+  font-family:Arial, sans-serif;
+  color:white;
+  height:100%;
+}
+
+.app{
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  max-width:500px;
+  margin:auto;
+}
+
+.header{
+  padding:15px;
+  text-align:center;
+  font-size:20px;
+  font-weight:bold;
+}
+
+.video-container{
+  position:relative;
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:10px;
+}
+
+video{
+  width:100%;
+  height:auto;
+  border-radius:20px;
+  background:black;
+}
+
+.controls{
+  padding:15px;
+  background:#111827;
+  border-top-left-radius:20px;
+  border-top-right-radius:20px;
+}
+
+input{
+  width:100%;
+  padding:15px;
+  border:none;
+  border-radius:12px;
+  font-size:18px;
+  margin-bottom:15px;
+}
+
+button{
+  width:100%;
+  padding:16px;
+  border:none;
+  border-radius:12px;
+  font-size:18px;
+  font-weight:bold;
+  margin-bottom:10px;
+  cursor:pointer;
+}
+
+.enroll{
+  background:#00c853;
+  color:white;
+}
+
+.verify{
+  background:#2962ff;
+  color:white;
+}
+
+.status{
+  text-align:center;
+  margin-top:10px;
+  font-weight:bold;
+  font-size:16px;
+}
+</style>
 </head>
+
 <body>
 
-<h2>Face Recognition App</h2>
+<div class="app">
 
-<input type="text" id="nama" placeholder="Masukkan Nama">
-<br><br>
+  <div class="header">
+    Face Recognition
+  </div>
 
-<video id="video" width="320" height="240" autoplay muted></video>
-<br><br>
+  <div class="video-container">
+    <video id="video" autoplay muted playsinline></video>
+  </div>
 
-<button onclick="enroll()">Tambah Wajah</button>
-<button onclick="verify()">Verifikasi Wajah</button>
+  <div class="controls">
+
+    <input type="text" id="nama" placeholder="Masukkan Nama">
+
+    <button class="enroll" onclick="enroll()">Tambah Wajah</button>
+    <button class="verify" onclick="verify()">Verifikasi</button>
+
+    <div class="status" id="status">Loading model...</div>
+
+  </div>
+
+</div>
 
 <script>
 
 const video = document.getElementById("video");
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
+const statusText = document.getElementById("status");
+
+const GAS_URL = "ISI_URL_GAS_KAMU";
 const MODEL_URL = "./models";
 
-navigator.mediaDevices.getUserMedia({ video: {} })
-.then(stream => video.srcObject = stream);
 
-async function loadModels() {
+// Kamera depan untuk smartphone
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "user" }
+})
+.then(stream => {
+  video.srcObject = stream;
+})
+.catch(err => {
+  alert("Kamera tidak bisa diakses");
+});
+
+async function loadModels(){
   await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
   await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
   await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+  statusText.innerText = "Model siap digunakan";
 }
 
 loadModels();
 
-async function getDescriptor() {
+async function getDescriptor(){
   const detection = await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks()
-    .withFaceDescriptor();
+  .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+  .withFaceLandmarks()
+  .withFaceDescriptor();
 
-  if (!detection) {
-    alert("Wajah tidak terdeteksi");
+  if(!detection){
+    statusText.innerText = "Wajah tidak terdeteksi";
     return null;
   }
 
   return Array.from(detection.descriptor);
 }
 
-async function enroll() {
+async function enroll(){
 
   const nama = document.getElementById("nama").value;
-  if (!nama) {
+
+  if(!nama){
     alert("Isi nama dulu");
     return;
   }
 
-  const descriptor = await getDescriptor();
-  if (!descriptor) return;
+  statusText.innerText = "Memproses...";
 
-  fetch(GAS_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify({
-      mode: "enroll",
-      nama: nama,
-      descriptor: descriptor
+  const descriptor = await getDescriptor();
+  if(!descriptor) return;
+
+  fetch(GAS_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      mode:"enroll",
+      nama:nama,
+      descriptor:descriptor
     })
   })
-  .then(() => alert("Data terkirim"));
+  .then(res=>res.json())
+  .then(()=>{
+    statusText.innerText = "Data berhasil disimpan";
+  });
 }
 
-function euclideanDistance(d1, d2) {
-  let sum = 0;
-  for (let i = 0; i < d1.length; i++) {
-    sum += Math.pow(d1[i] - d2[i], 2);
+function euclideanDistance(d1,d2){
+  let sum=0;
+  for(let i=0;i<d1.length;i++){
+    sum+=Math.pow(d1[i]-d2[i],2);
   }
   return Math.sqrt(sum);
 }
 
-async function verify() {
+async function verify(){
+
+  statusText.innerText = "Memproses...";
 
   const descriptor = await getDescriptor();
-  if (!descriptor) return;
+  if(!descriptor) return;
 
   const response = await fetch(GAS_URL);
   const database = await response.json();
 
-  let bestMatch = null;
-  let minDistance = 999;
+  let bestMatch=null;
+  let minDistance=999;
 
-  database.forEach(user => {
-    const distance = euclideanDistance(descriptor, user.descriptor);
-    if (distance < minDistance) {
+  database.forEach(user=>{
+    const distance = euclideanDistance(descriptor,user.descriptor);
+    if(distance < minDistance){
       minDistance = distance;
       bestMatch = user.nama;
     }
   });
 
-  if (minDistance < 0.6) {
-    alert("MATCH dengan: " + bestMatch);
-  } else {
-    alert("Tidak dikenali");
+  if(minDistance < 0.6){
+    statusText.innerText = "MATCH dengan: " + bestMatch;
+  }else{
+    statusText.innerText = "Tidak dikenali";
   }
 }
 
 </script>
+
 </body>
 </html>
