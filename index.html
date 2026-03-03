@@ -2,242 +2,225 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Face Recognition Secure</title>
+<title>Face Recognition Pro</title>
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
 body{
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:linear-gradient(135deg,#1e3c72,#2a5298);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
+  font-family: Arial, sans-serif;
+  background:#0f172a;
   color:white;
-}
-.card{
-  background:rgba(255,255,255,0.1);
-  backdrop-filter:blur(15px);
-  padding:30px;
-  border-radius:20px;
   text-align:center;
-  width:400px;
-  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+  margin:0;
 }
+
+.container{
+  max-width:400px;
+  margin:auto;
+  padding:20px;
+}
+
+.video-wrapper{
+  position:relative;
+  display:inline-block;
+}
+
 video{
   border-radius:15px;
-  border:3px solid white;
 }
+
+.overlay{
+  position:absolute;
+  top:0;
+  left:0;
+}
+
+.frame{
+  position:absolute;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  width:200px;
+  height:260px;
+  border:3px solid #00ffcc;
+  border-radius:50%;
+  box-shadow:0 0 20px #00ffcc;
+  pointer-events:none;
+}
+
 input{
+  width:90%;
   padding:10px;
-  border-radius:10px;
+  border-radius:8px;
   border:none;
-  width:80%;
-  margin-bottom:15px;
+  margin-top:15px;
 }
+
 button{
   padding:10px 20px;
+  margin:10px;
   border:none;
-  border-radius:10px;
-  cursor:pointer;
-  margin:5px;
+  border-radius:8px;
+  background:#00ffcc;
   font-weight:bold;
+  cursor:pointer;
 }
-.enroll{background:#00c851;color:white;}
-.verify{background:#ffbb33;color:black;}
+
 .status{
   margin-top:10px;
   font-weight:bold;
-}
-.challenge{
-  margin:10px 0;
-  font-size:18px;
-  color:#ffeb3b;
 }
 </style>
 </head>
 
 <body>
+<div class="container">
 
-<div class="card">
-<h2>Secure Face Recognition</h2>
+<h2>Face Recognition Pro</h2>
+
+<div class="video-wrapper">
+  <video id="video" width="320" height="240" autoplay muted></video>
+  <canvas id="canvas" class="overlay"></canvas>
+  <div class="frame"></div>
+</div>
 
 <input type="text" id="nama" placeholder="Masukkan Nama">
 
-<video id="video" width="320" height="240" autoplay muted></video>
+<div class="status" id="status">🔴 Loading Model...</div>
 
-<div class="challenge" id="challengeText"></div>
+<button onclick="enroll()">Tambah Wajah</button>
+<button onclick="verify()">Verifikasi</button>
 
-<button class="enroll" onclick="enroll()">Tambah Wajah</button>
-<button class="verify" onclick="verify()">Verifikasi</button>
-
-<div class="status" id="status">Loading model...</div>
 </div>
 
 <script>
 
 const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
 const statusText = document.getElementById("status");
-const challengeText = document.getElementById("challengeText");
-
-const GAS_URL = "ISI_URL_GAS_KAMU";
 const MODEL_URL = "./models";
+const GAS_URL = "ISI_URL_GAS_KAMU";
 
-let challengeDirection = null;
+let blinked = false;
 
-navigator.mediaDevices.getUserMedia({ video: {} })
+navigator.mediaDevices.getUserMedia({ video:{} })
 .then(stream => video.srcObject = stream);
 
-async function loadModels() {
+async function loadModels(){
   await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
   await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
   await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-  statusText.innerText = "Model siap ✅";
+  statusText.innerText = "🟡 Silakan Kedip Mata";
 }
 
 loadModels();
 
 function distance(a,b){
-  return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
+  return Math.sqrt(
+    Math.pow(a.x-b.x,2)+
+    Math.pow(a.y-b.y,2)
+  );
 }
 
 function getEAR(eye){
-  const A=distance(eye[1],eye[5]);
-  const B=distance(eye[2],eye[4]);
-  const C=distance(eye[0],eye[3]);
+  const A = distance(eye[1],eye[5]);
+  const B = distance(eye[2],eye[4]);
+  const C = distance(eye[0],eye[3]);
   return (A+B)/(2*C);
 }
 
-async function detectBlinkAndTurn(){
-
-  statusText.innerText="Liveness check...";
+async function detectBlink(){
 
   const detection = await faceapi
-    .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks();
-
-  if(!detection) return false;
-
-  const landmarks=detection.landmarks;
-
-  const leftEAR=getEAR(landmarks.getLeftEye());
-  const rightEAR=getEAR(landmarks.getRightEye());
-  const avgEAR=(leftEAR+rightEAR)/2;
-
-  const nose=landmarks.getNose()[3];
-  const jaw=landmarks.getJawOutline();
-
-  const faceCenter=jaw[8];
-
-  let turned=false;
-
-  if(challengeDirection==="left" && nose.x < faceCenter.x-15) turned=true;
-  if(challengeDirection==="right" && nose.x > faceCenter.x+15) turned=true;
-
-  if(avgEAR < 0.20 && turned){
-    return true;
-  }
-
-  return false;
-}
-
-function randomChallenge(){
-  challengeDirection=Math.random()>0.5?"left":"right";
-  challengeText.innerText="Kedipkan mata & lihat ke "+challengeDirection.toUpperCase();
-}
-
-async function getDescriptor(){
-  const detection = await faceapi
-    .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks()
-    .withFaceDescriptor();
+  .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
+  .withFaceLandmarks()
+  .withFaceDescriptor();
 
   if(!detection){
-    statusText.innerText="Wajah tidak terdeteksi ❌";
+    statusText.innerText="🔴 Wajah Tidak Terdeteksi";
     return null;
   }
 
-  return Array.from(detection.descriptor);
+  const leftEAR = getEAR(detection.landmarks.getLeftEye());
+  const rightEAR = getEAR(detection.landmarks.getRightEye());
+
+  const avgEAR = (leftEAR+rightEAR)/2;
+
+  if(avgEAR < 0.22){
+    blinked = true;
+    statusText.innerText="🟢 Liveness OK";
+  }
+
+  return detection.descriptor;
 }
 
 async function enroll(){
 
-  const nama=document.getElementById("nama").value;
-  if(!nama){alert("Isi nama dulu");return;}
-
-  randomChallenge();
-
-  setTimeout(async()=>{
-
-    const live=await detectBlinkAndTurn();
-    if(!live){
-      statusText.innerText="Liveness gagal ❌";
-      return;
-    }
-
-    const descriptor=await getDescriptor();
-    if(!descriptor)return;
-
-    fetch(GAS_URL,{
-      method:"POST",
-      mode:"no-cors",
-      body:JSON.stringify({
-        mode:"enroll",
-        nama:nama,
-        descriptor:descriptor
-      })
-    });
-
-    statusText.innerText="Wajah tersimpan ✅";
-
-  },3000);
-}
-
-function euclideanDistance(d1,d2){
-  let sum=0;
-  for(let i=0;i<d1.length;i++){
-    sum+=(d1[i]-d2[i])**2;
+  if(!blinked){
+    alert("Harus kedip dulu!");
+    return;
   }
-  return Math.sqrt(sum);
+
+  const nama=document.getElementById("nama").value;
+  if(!nama) return alert("Isi nama dulu");
+
+  const descriptor=await detectBlink();
+  if(!descriptor) return;
+
+  fetch(GAS_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      mode:"enroll",
+      nama:nama,
+      descriptor:Array.from(descriptor)
+    })
+  })
+  .then(res=>res.text())
+  .then(msg=>{
+    alert("Berhasil daftar");
+    blinked=false;
+    statusText.innerText="🟡 Silakan Kedip Mata";
+  });
 }
 
 async function verify(){
 
-  randomChallenge();
+  if(!blinked){
+    alert("Harus kedip dulu!");
+    return;
+  }
 
-  setTimeout(async()=>{
+  const descriptor=await detectBlink();
+  if(!descriptor) return;
 
-    const live=await detectBlinkAndTurn();
-    if(!live){
-      statusText.innerText="Liveness gagal ❌";
-      return;
+  const response=await fetch(GAS_URL);
+  const database=await response.json();
+
+  let bestMatch=null;
+  let minDistance=999;
+
+  database.forEach(user=>{
+    let sum=0;
+    for(let i=0;i<descriptor.length;i++){
+      sum+=Math.pow(descriptor[i]-user.descriptor[i],2);
     }
+    const dist=Math.sqrt(sum);
 
-    const descriptor=await getDescriptor();
-    if(!descriptor)return;
-
-    const response=await fetch(GAS_URL);
-    const database=await response.json();
-
-    let bestMatch=null;
-    let minDistance=999;
-
-    database.forEach(user=>{
-      const distance=euclideanDistance(descriptor,user.descriptor);
-      if(distance<minDistance){
-        minDistance=distance;
-        bestMatch=user.nama;
-      }
-    });
-
-    if(minDistance<0.6){
-      statusText.innerText="MATCH dengan "+bestMatch+" ✅";
-    }else{
-      statusText.innerText="Tidak dikenali ❌";
+    if(dist<minDistance){
+      minDistance=dist;
+      bestMatch=user.nama;
     }
+  });
 
-  },3000);
+  if(minDistance<0.6){
+    alert("MATCH dengan "+bestMatch);
+  }else{
+    alert("Tidak dikenali");
+  }
+
+  blinked=false;
+  statusText.innerText="🟡 Silakan Kedip Mata";
 }
 
 </script>
