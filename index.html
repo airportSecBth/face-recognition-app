@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 
-<!-- MOBILE OPTIMIZED -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#0f172a">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,9 +13,7 @@
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
-*{
-  box-sizing:border-box;
-}
+*{ box-sizing:border-box; }
 
 html,body{
   margin:0;
@@ -43,7 +40,6 @@ html,body{
 }
 
 .video-container{
-  position:relative;
   flex:1;
   display:flex;
   justify-content:center;
@@ -85,15 +81,8 @@ button{
   cursor:pointer;
 }
 
-.enroll{
-  background:#00c853;
-  color:white;
-}
-
-.verify{
-  background:#2962ff;
-  color:white;
-}
+.enroll{ background:#00c853; color:white; }
+.verify{ background:#2962ff; color:white; }
 
 .status{
   text-align:center;
@@ -108,23 +97,17 @@ button{
 
 <div class="app">
 
-  <div class="header">
-    Face Recognition
-  </div>
+  <div class="header">Face Recognition</div>
 
   <div class="video-container">
     <video id="video" autoplay muted playsinline></video>
   </div>
 
   <div class="controls">
-
     <input type="text" id="nama" placeholder="Masukkan Nama">
-
     <button class="enroll" onclick="enroll()">Tambah Wajah</button>
     <button class="verify" onclick="verify()">Verifikasi</button>
-
-    <div class="status" id="status">Loading model...</div>
-
+    <div class="status" id="status">Loading...</div>
   </div>
 
 </div>
@@ -137,32 +120,59 @@ const statusText = document.getElementById("status");
 const GAS_URL = "ISI_URL_GAS_KAMU";
 const MODEL_URL = "./models";
 
+let modelReady = false;
+let cameraReady = false;
 
-// Kamera depan untuk smartphone
-navigator.mediaDevices.getUserMedia({
-  video: { facingMode: "user" }
-})
-.then(stream => {
-  video.srcObject = stream;
-})
-.catch(err => {
-  alert("Kamera tidak bisa diakses");
-});
+/* ================= CAMERA ================= */
+async function startCamera(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" }
+    });
 
+    video.srcObject = stream;
+
+    await new Promise(resolve=>{
+      video.onloadedmetadata = ()=>{
+        video.play();
+        cameraReady = true;
+        resolve();
+      }
+    });
+
+  }catch(err){
+    alert("Kamera tidak bisa diakses");
+    console.error(err);
+  }
+}
+
+/* ================= LOAD MODELS ================= */
 async function loadModels(){
   await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
   await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
   await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+  modelReady = true;
   statusText.innerText = "Model siap digunakan";
 }
 
-loadModels();
-
+/* ================= GET DESCRIPTOR ================= */
 async function getDescriptor(){
+
+  if(!modelReady){
+    statusText.innerText = "Model belum siap";
+    return null;
+  }
+
+  if(!cameraReady || video.videoWidth === 0){
+    statusText.innerText = "Kamera belum siap";
+    return null;
+  }
+
   const detection = await faceapi
-  .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-  .withFaceLandmarks()
-  .withFaceDescriptor();
+    .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
+    .withFaceLandmarks()
+    .withFaceDescriptor();
 
   if(!detection){
     statusText.innerText = "Wajah tidak terdeteksi";
@@ -172,10 +182,10 @@ async function getDescriptor(){
   return Array.from(detection.descriptor);
 }
 
+/* ================= ENROLL ================= */
 async function enroll(){
 
   const nama = document.getElementById("nama").value;
-
   if(!nama){
     alert("Isi nama dulu");
     return;
@@ -186,21 +196,27 @@ async function enroll(){
   const descriptor = await getDescriptor();
   if(!descriptor) return;
 
-  fetch(GAS_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      mode:"enroll",
-      nama:nama,
-      descriptor:descriptor
-    })
-  })
-  .then(res=>res.json())
-  .then(()=>{
+  try{
+    const response = await fetch(GAS_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        mode:"enroll",
+        nama:nama,
+        descriptor:descriptor
+      })
+    });
+
+    await response.json();
     statusText.innerText = "Data berhasil disimpan";
-  });
+
+  }catch(err){
+    statusText.innerText = "Gagal kirim data";
+    console.error(err);
+  }
 }
 
+/* ================= DISTANCE ================= */
 function euclideanDistance(d1,d2){
   let sum=0;
   for(let i=0;i<d1.length;i++){
@@ -209,6 +225,7 @@ function euclideanDistance(d1,d2){
   return Math.sqrt(sum);
 }
 
+/* ================= VERIFY ================= */
 async function verify(){
 
   statusText.innerText = "Memproses...";
@@ -216,26 +233,40 @@ async function verify(){
   const descriptor = await getDescriptor();
   if(!descriptor) return;
 
-  const response = await fetch(GAS_URL);
-  const database = await response.json();
+  try{
+    const response = await fetch(GAS_URL);
+    const database = await response.json();
 
-  let bestMatch=null;
-  let minDistance=999;
+    let bestMatch=null;
+    let minDistance=999;
 
-  database.forEach(user=>{
-    const distance = euclideanDistance(descriptor,user.descriptor);
-    if(distance < minDistance){
-      minDistance = distance;
-      bestMatch = user.nama;
+    database.forEach(user=>{
+      const distance = euclideanDistance(descriptor,user.descriptor);
+      if(distance < minDistance){
+        minDistance = distance;
+        bestMatch = user.nama;
+      }
+    });
+
+    if(minDistance < 0.6){
+      statusText.innerText = "MATCH dengan: " + bestMatch;
+    }else{
+      statusText.innerText = "Tidak dikenali";
     }
-  });
 
-  if(minDistance < 0.6){
-    statusText.innerText = "MATCH dengan: " + bestMatch;
-  }else{
-    statusText.innerText = "Tidak dikenali";
+  }catch(err){
+    statusText.innerText = "Gagal mengambil data";
+    console.error(err);
   }
 }
+
+/* ================= INIT ================= */
+async function init(){
+  await startCamera();
+  await loadModels();
+}
+
+init();
 
 </script>
 
