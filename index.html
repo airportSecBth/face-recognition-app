@@ -88,9 +88,11 @@ border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
 
+/* CONFIDENCE */
+
 .confidence{
 position:absolute;
-bottom:20px;
+bottom:40px;
 background:rgba(0,0,0,0.6);
 padding:8px 14px;
 border-radius:10px;
@@ -99,7 +101,19 @@ font-weight:bold;
 border:1px solid #00e5ff;
 }
 
-/* RESULT TOP CENTER */
+/* DETECT STATUS */
+
+.detect-status{
+position:absolute;
+bottom:10px;
+background:rgba(0,0,0,0.6);
+padding:6px 12px;
+border-radius:10px;
+font-size:13px;
+border:1px solid #64748b;
+}
+
+/* RESULT TOP */
 
 .result-box{
 position:absolute;
@@ -114,6 +128,7 @@ font-size:16px;
 border:2px solid #00e5ff;
 z-index:10;
 display:none;
+white-space:nowrap;
 }
 
 .result-success{
@@ -219,8 +234,11 @@ min-height:24px;
 <div id="resultBox" class="result-box"></div>
 
 <video id="video" autoplay muted playsinline></video>
+
 <div class="face-frame" id="faceFrame"></div>
-<div class="confidence" id="confidenceBox">0%</div>
+
+<div class="confidence" id="confidenceBox">Confidence 0%</div>
+<div class="detect-status" id="detectStatus">Menunggu kamera...</div>
 
 </div>
 
@@ -248,6 +266,9 @@ const statusText=document.getElementById("status");
 
 const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
+const detectStatus=document.getElementById("detectStatus");
+
+const resultBox=document.getElementById("resultBox");
 
 const loading=document.getElementById("loading");
 const loadingText=document.getElementById("loadingText");
@@ -257,8 +278,6 @@ const enrollSection=document.getElementById("enrollSection");
 
 const tabVerify=document.getElementById("tabVerify");
 const tabEnroll=document.getElementById("tabEnroll");
-
-const resultBox=document.getElementById("resultBox");
 
 const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL="./models";
@@ -301,9 +320,7 @@ if(type==="success") resultBox.classList.add("result-success");
 if(type==="fail") resultBox.classList.add("result-fail");
 
 setTimeout(()=>{
-
 resultBox.style.display="none";
-
 },4000);
 
 }
@@ -325,7 +342,7 @@ navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 .then(stream=>{video.srcObject=stream;})
 .catch(()=>{statusText.innerText="Kamera tidak bisa diakses";});
 
-/* LOAD MODEL */
+/* LOAD MODELS */
 
 async function loadModels(){
 
@@ -357,12 +374,16 @@ if(detection){
 faceFrame.classList.add("active");
 
 const percent=Math.round(detection.score*100);
+
 confidenceBox.innerText="Confidence "+percent+"%";
+detectStatus.innerText="Mendeteksi wajah...";
 
 }else{
 
 faceFrame.classList.remove("active");
-confidenceBox.innerText="No Face";
+
+confidenceBox.innerText="Confidence 0%";
+detectStatus.innerText="Tidak ada wajah";
 
 }
 
