@@ -8,6 +8,7 @@
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
+
 *{box-sizing:border-box;}
 
 body{
@@ -57,6 +58,57 @@ video{
   border-radius:20px;
   pointer-events:none;
   box-shadow:0 0 25px #00e5ff;
+  transition:0.3s;
+}
+
+.face-frame.active{
+  border:3px solid #00ff7b;
+  box-shadow:0 0 25px #00ff7b;
+}
+
+.confidence{
+  position:absolute;
+  bottom:20px;
+  background:rgba(0,0,0,0.6);
+  padding:8px 14px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:bold;
+  border:1px solid #00e5ff;
+}
+
+/* ===== SPINNER ===== */
+
+.loading-overlay{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  z-index:999;
+}
+
+.spinner{
+  width:60px;
+  height:60px;
+  border:6px solid rgba(255,255,255,0.2);
+  border-top:6px solid #00e5ff;
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+
+.loading-text{
+  margin-top:15px;
+}
+
+@keyframes spin{
+  0%{transform:rotate(0deg);}
+  100%{transform:rotate(360deg);}
 }
 
 .controls{
@@ -96,41 +148,6 @@ button{
   min-height:24px;
 }
 
-/* ================= LOADING ================= */
-
-.loading-overlay{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.7);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  z-index:999;
-  flex-direction:column;
-}
-
-.spinner{
-  width:60px;
-  height:60px;
-  border:6px solid rgba(255,255,255,0.2);
-  border-top:6px solid #00e5ff;
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-}
-
-.loading-text{
-  margin-top:15px;
-  font-size:16px;
-}
-
-@keyframes spin{
-  0%{transform:rotate(0deg);}
-  100%{transform:rotate(360deg);}
-}
-
 </style>
 </head>
 
@@ -138,24 +155,29 @@ button{
 
 <div class="loading-overlay" id="loading">
   <div class="spinner"></div>
-  <div class="loading-text" id="loadingText">Memproses...</div>
+  <div class="loading-text" id="loadingText">Processing...</div>
 </div>
 
 <div class="app">
 
-  <div class="header">Face Recognition Pro</div>
+<div class="header">Face Recognition Pro</div>
 
-  <div class="video-wrapper">
-    <video id="video" autoplay muted playsinline></video>
-    <div class="face-frame"></div>
-  </div>
+<div class="video-wrapper">
+  <video id="video" autoplay muted playsinline></video>
+  <div class="face-frame" id="faceFrame"></div>
+  <div class="confidence" id="confidenceBox">0%</div>
+</div>
 
-  <div class="controls">
-    <input type="text" id="nama" placeholder="Masukkan Nama">
-    <button class="enroll" onclick="enroll()">Tambah Wajah</button>
-    <button class="verify" onclick="verify()">Verifikasi</button>
-    <div class="status" id="status">Loading model...</div>
-  </div>
+<div class="controls">
+
+<input type="text" id="nama" placeholder="Masukkan Nama">
+
+<button class="enroll" onclick="enroll()">Tambah Wajah</button>
+<button class="verify" onclick="verify()">Verifikasi</button>
+
+<div class="status" id="status">Loading model...</div>
+
+</div>
 
 </div>
 
@@ -164,160 +186,212 @@ button{
 const video = document.getElementById("video");
 const statusText = document.getElementById("status");
 
+const faceFrame = document.getElementById("faceFrame");
+const confidenceBox = document.getElementById("confidenceBox");
+
 const loading = document.getElementById("loading");
 const loadingText = document.getElementById("loadingText");
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL = "./models";
 
-/* ================= LOADING CONTROL ================= */
+/* ===== LOADING ===== */
 
 function showLoading(text){
-  loading.style.display = "flex";
-  loadingText.innerText = text;
+  loading.style.display="flex";
+  loadingText.innerText=text;
 }
 
 function hideLoading(){
-  loading.style.display = "none";
+  loading.style.display="none";
 }
 
-/* ================= CAMERA ================= */
+/* ===== CAMERA ===== */
 
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-.then(stream => {
-  video.srcObject = stream;
+navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
+.then(stream=>{
+video.srcObject=stream;
 })
-.catch(() => {
-  statusText.innerText = "Kamera tidak bisa diakses";
+.catch(()=>{
+statusText.innerText="Kamera tidak bisa diakses";
 });
 
-/* ================= LOAD MODELS ================= */
+/* ===== LOAD MODELS ===== */
 
 async function loadModels(){
-  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-  statusText.innerText = "Siap digunakan";
+
+await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+statusText.innerText="Siap digunakan";
+
+startFaceDetection();
+
 }
 
 loadModels();
 
-/* ================= GET DESCRIPTOR ================= */
+/* ===== REALTIME DETECTION ===== */
+
+async function startFaceDetection(){
+
+setInterval(async ()=>{
+
+const detection = await faceapi.detectSingleFace(
+video,
+new faceapi.TinyFaceDetectorOptions()
+);
+
+if(detection){
+
+faceFrame.classList.add("active");
+
+const percent = Math.round(detection.score*100);
+confidenceBox.innerText="Confidence : "+percent+"%";
+
+}else{
+
+faceFrame.classList.remove("active");
+confidenceBox.innerText="No Face";
+
+}
+
+},500);
+
+}
+
+/* ===== DESCRIPTOR ===== */
 
 async function getDescriptor(){
 
-  statusText.innerText = "Mendeteksi wajah...";
+statusText.innerText="Mendeteksi wajah...";
 
-  const detection = await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks()
-    .withFaceDescriptor();
+const detection = await faceapi
+.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
+.withFaceLandmarks()
+.withFaceDescriptor();
 
-  if (!detection) {
-    statusText.innerText = "Wajah tidak terdeteksi";
-    hideLoading();
-    return null;
-  }
-
-  return Array.from(detection.descriptor);
+if(!detection){
+statusText.innerText="Wajah tidak terdeteksi";
+hideLoading();
+return null;
 }
 
-/* ================= ENROLL ================= */
+return Array.from(detection.descriptor);
+
+}
+
+/* ===== ENROLL ===== */
 
 async function enroll(){
 
-  const nama = document.getElementById("nama").value;
+const nama=document.getElementById("nama").value;
 
-  if (!nama){
-    statusText.innerText = "Isi nama dulu";
-    return;
-  }
-
-  showLoading("Menyimpan wajah...");
-
-  const descriptor = await getDescriptor();
-  if (!descriptor) return;
-
-  await fetch(GAS_URL,{
-    method:"POST",
-    mode:"no-cors",
-    body:JSON.stringify({
-      mode:"enroll",
-      nama:nama,
-      descriptor:descriptor
-    })
-  });
-
-  hideLoading();
-  statusText.innerText = "Wajah berhasil ditambahkan";
+if(!nama){
+statusText.innerText="Isi nama dulu";
+return;
 }
 
-/* ================= DISTANCE ================= */
+showLoading("Menyimpan wajah...");
+
+const descriptor=await getDescriptor();
+if(!descriptor)return;
+
+fetch(GAS_URL,{
+method:"POST",
+mode:"no-cors",
+body:JSON.stringify({
+mode:"enroll",
+nama:nama,
+descriptor:descriptor
+})
+});
+
+hideLoading();
+
+statusText.innerText="Data terkirim";
+
+}
+
+/* ===== DISTANCE ===== */
 
 function euclideanDistance(d1,d2){
-  let sum=0;
-  for(let i=0;i<d1.length;i++){
-    sum+=Math.pow(d1[i]-d2[i],2);
-  }
-  return Math.sqrt(sum);
+
+let sum=0;
+
+for(let i=0;i<d1.length;i++){
+sum+=Math.pow(d1[i]-d2[i],2);
 }
 
-/* ================= VERIFY ================= */
+return Math.sqrt(sum);
+
+}
+
+/* ===== VERIFY ===== */
 
 async function verify(){
 
-  showLoading("Memverifikasi wajah...");
+showLoading("Memverifikasi wajah...");
 
-  const descriptor = await getDescriptor();
-  if (!descriptor) return;
+const descriptor=await getDescriptor();
+if(!descriptor)return;
 
-  let response;
+let response;
 
-  try{
-    response = await fetch(GAS_URL);
-  }catch{
-    hideLoading();
-    statusText.innerText = "Gagal koneksi server";
-    return;
-  }
+try{
+response=await fetch(GAS_URL);
+}catch{
+hideLoading();
+statusText.innerText="Gagal koneksi server";
+return;
+}
 
-  let database;
+let database;
 
-  try{
-    database = await response.json();
-  }catch{
-    hideLoading();
-    statusText.innerText = "Response bukan JSON valid";
-    return;
-  }
+try{
+database=await response.json();
+}catch{
+hideLoading();
+statusText.innerText="Response bukan JSON valid";
+return;
+}
 
-  if (!Array.isArray(database) || database.length === 0){
-    hideLoading();
-    statusText.innerText = "Database kosong";
-    return;
-  }
+if(!Array.isArray(database)||database.length===0){
+hideLoading();
+statusText.innerText="Database kosong";
+return;
+}
 
-  let bestMatch = null;
-  let minDistance = 999;
+let bestMatch=null;
+let minDistance=999;
 
-  database.forEach(user=>{
-    if(!user.descriptor) return;
+database.forEach(user=>{
 
-    const distance = euclideanDistance(descriptor,user.descriptor);
+if(!user.descriptor)return;
 
-    if(distance < minDistance){
-      minDistance = distance;
-      bestMatch = user.nama;
-    }
-  });
+const distance=euclideanDistance(descriptor,user.descriptor);
 
-  hideLoading();
+if(distance<minDistance){
 
-  if(minDistance < 0.6){
-    statusText.innerText = "MATCH: " + bestMatch;
-  }else{
-    statusText.innerText = "Tidak dikenali";
-  }
+minDistance=distance;
+bestMatch=user.nama;
+
+}
+
+});
+
+hideLoading();
+
+if(minDistance<0.6){
+
+statusText.innerText="MATCH : "+bestMatch;
+
+}else{
+
+statusText.innerText="Tidak dikenali";
+
+}
 
 }
 
