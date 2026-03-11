@@ -12,140 +12,160 @@
 *{box-sizing:border-box;}
 
 body{
-  margin:0;
-  background:#0f172a;
-  font-family:Arial, sans-serif;
-  color:white;
-  display:flex;
-  justify-content:center;
+margin:0;
+background:#0f172a;
+font-family:Arial;
+color:white;
+display:flex;
+justify-content:center;
 }
 
 .app{
-  width:100%;
-  max-width:500px;
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
+width:100%;
+max-width:500px;
+min-height:100vh;
+display:flex;
+flex-direction:column;
 }
 
 .header{
-  padding:20px;
-  text-align:center;
-  font-size:22px;
-  font-weight:bold;
+padding:20px;
+text-align:center;
+font-size:22px;
+font-weight:bold;
 }
 
+/* TAB */
+
+.tabs{
+display:flex;
+background:#020617;
+}
+
+.tab{
+flex:1;
+padding:15px;
+text-align:center;
+cursor:pointer;
+border-bottom:3px solid transparent;
+}
+
+.tab.active{
+border-bottom:3px solid #00e5ff;
+background:#111827;
+}
+
+/* VIDEO */
+
 .video-wrapper{
-  position:relative;
-  flex:1;
-  padding:15px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+position:relative;
+flex:1;
+padding:15px;
+display:flex;
+justify-content:center;
+align-items:center;
 }
 
 video{
-  width:100%;
-  border-radius:20px;
-  background:black;
+width:100%;
+border-radius:20px;
+background:black;
 }
 
 .face-frame{
-  position:absolute;
-  width:220px;
-  height:280px;
-  border:3px solid #00e5ff;
-  border-radius:20px;
-  pointer-events:none;
-  box-shadow:0 0 25px #00e5ff;
-  transition:0.3s;
+position:absolute;
+width:220px;
+height:280px;
+border:3px solid #00e5ff;
+border-radius:20px;
+pointer-events:none;
+box-shadow:0 0 25px #00e5ff;
+transition:0.3s;
 }
 
 .face-frame.active{
-  border:3px solid #00ff7b;
-  box-shadow:0 0 25px #00ff7b;
+border:3px solid #00ff7b;
+box-shadow:0 0 25px #00ff7b;
 }
 
 .confidence{
-  position:absolute;
-  bottom:20px;
-  background:rgba(0,0,0,0.6);
-  padding:8px 14px;
-  border-radius:10px;
-  font-size:14px;
-  font-weight:bold;
-  border:1px solid #00e5ff;
+position:absolute;
+bottom:20px;
+background:rgba(0,0,0,0.6);
+padding:8px 14px;
+border-radius:10px;
+font-size:14px;
+font-weight:bold;
+border:1px solid #00e5ff;
 }
 
-/* ===== SPINNER ===== */
+/* LOADING */
 
 .loading-overlay{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.7);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  z-index:999;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.7);
+display:none;
+justify-content:center;
+align-items:center;
+flex-direction:column;
+z-index:999;
 }
 
 .spinner{
-  width:60px;
-  height:60px;
-  border:6px solid rgba(255,255,255,0.2);
-  border-top:6px solid #00e5ff;
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-}
-
-.loading-text{
-  margin-top:15px;
+width:60px;
+height:60px;
+border:6px solid rgba(255,255,255,0.2);
+border-top:6px solid #00e5ff;
+border-radius:50%;
+animation:spin 1s linear infinite;
 }
 
 @keyframes spin{
-  0%{transform:rotate(0deg);}
-  100%{transform:rotate(360deg);}
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
 }
 
+/* CONTROL */
+
 .controls{
-  padding:20px;
-  background:#111827;
-  border-top-left-radius:25px;
-  border-top-right-radius:25px;
+padding:20px;
+background:#111827;
+border-top-left-radius:25px;
+border-top-right-radius:25px;
 }
 
 input{
-  width:100%;
-  padding:15px;
-  border:none;
-  border-radius:12px;
-  font-size:16px;
-  margin-bottom:15px;
+width:100%;
+padding:15px;
+border:none;
+border-radius:12px;
+font-size:16px;
+margin-bottom:15px;
 }
 
 button{
-  width:100%;
-  padding:16px;
-  border:none;
-  border-radius:12px;
-  font-size:16px;
-  font-weight:bold;
-  margin-bottom:10px;
-  cursor:pointer;
+width:100%;
+padding:16px;
+border:none;
+border-radius:12px;
+font-size:16px;
+font-weight:bold;
+margin-bottom:10px;
+cursor:pointer;
 }
 
 .enroll{background:#00c853;color:white;}
 .verify{background:#2962ff;color:white;}
 
 .status{
-  text-align:center;
-  margin-top:10px;
-  font-weight:bold;
-  min-height:24px;
+text-align:center;
+margin-top:10px;
+font-weight:bold;
+min-height:24px;
 }
 
 </style>
@@ -154,26 +174,39 @@ button{
 <body>
 
 <div class="loading-overlay" id="loading">
-  <div class="spinner"></div>
-  <div class="loading-text" id="loadingText">Processing...</div>
+<div class="spinner"></div>
+<div id="loadingText">Processing...</div>
 </div>
 
 <div class="app">
 
 <div class="header">Face Recognition Pro</div>
 
+<div class="tabs">
+<div class="tab active" onclick="switchTab('verify')" id="tabVerify">Verifikasi</div>
+<div class="tab" onclick="switchTab('enroll')" id="tabEnroll">Tambah Wajah</div>
+</div>
+
 <div class="video-wrapper">
-  <video id="video" autoplay muted playsinline></video>
-  <div class="face-frame" id="faceFrame"></div>
-  <div class="confidence" id="confidenceBox">0%</div>
+<video id="video" autoplay muted playsinline></video>
+<div class="face-frame" id="faceFrame"></div>
+<div class="confidence" id="confidenceBox">0%</div>
 </div>
 
 <div class="controls">
 
-<input type="text" id="nama" placeholder="Masukkan Nama">
+<div id="verifySection">
 
+<button class="verify" onclick="verify()">Verifikasi Wajah</button>
+
+</div>
+
+<div id="enrollSection" style="display:none;">
+
+<input type="text" id="nama" placeholder="Masukkan Nama">
 <button class="enroll" onclick="enroll()">Tambah Wajah</button>
-<button class="verify" onclick="verify()">Verifikasi</button>
+
+</div>
 
 <div class="status" id="status">Loading model...</div>
 
@@ -183,40 +216,66 @@ button{
 
 <script>
 
-const video = document.getElementById("video");
-const statusText = document.getElementById("status");
+const video=document.getElementById("video");
+const statusText=document.getElementById("status");
 
-const faceFrame = document.getElementById("faceFrame");
-const confidenceBox = document.getElementById("confidenceBox");
+const faceFrame=document.getElementById("faceFrame");
+const confidenceBox=document.getElementById("confidenceBox");
 
-const loading = document.getElementById("loading");
-const loadingText = document.getElementById("loadingText");
+const loading=document.getElementById("loading");
+const loadingText=document.getElementById("loadingText");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
-const MODEL_URL = "./models";
+const verifySection=document.getElementById("verifySection");
+const enrollSection=document.getElementById("enrollSection");
 
-/* ===== LOADING ===== */
+const tabVerify=document.getElementById("tabVerify");
+const tabEnroll=document.getElementById("tabEnroll");
+
+const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
+const MODEL_URL="./models";
+
+/* TAB SWITCH */
+
+function switchTab(tab){
+
+if(tab==="verify"){
+
+verifySection.style.display="block";
+enrollSection.style.display="none";
+
+tabVerify.classList.add("active");
+tabEnroll.classList.remove("active");
+
+}else{
+
+verifySection.style.display="none";
+enrollSection.style.display="block";
+
+tabVerify.classList.remove("active");
+tabEnroll.classList.add("active");
+
+}
+
+}
+
+/* LOADING */
 
 function showLoading(text){
-  loading.style.display="flex";
-  loadingText.innerText=text;
+loading.style.display="flex";
+loadingText.innerText=text;
 }
 
 function hideLoading(){
-  loading.style.display="none";
+loading.style.display="none";
 }
 
-/* ===== CAMERA ===== */
+/* CAMERA */
 
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{
-video.srcObject=stream;
-})
-.catch(()=>{
-statusText.innerText="Kamera tidak bisa diakses";
-});
+.then(stream=>{video.srcObject=stream;})
+.catch(()=>{statusText.innerText="Kamera tidak bisa diakses";});
 
-/* ===== LOAD MODELS ===== */
+/* LOAD MODEL */
 
 async function loadModels(){
 
@@ -232,13 +291,13 @@ startFaceDetection();
 
 loadModels();
 
-/* ===== REALTIME DETECTION ===== */
+/* REALTIME DETECT */
 
 async function startFaceDetection(){
 
-setInterval(async ()=>{
+setInterval(async()=>{
 
-const detection = await faceapi.detectSingleFace(
+const detection=await faceapi.detectSingleFace(
 video,
 new faceapi.TinyFaceDetectorOptions()
 );
@@ -247,8 +306,8 @@ if(detection){
 
 faceFrame.classList.add("active");
 
-const percent = Math.round(detection.score*100);
-confidenceBox.innerText="Confidence : "+percent+"%";
+const percent=Math.round(detection.score*100);
+confidenceBox.innerText="Confidence "+percent+"%";
 
 }else{
 
@@ -261,36 +320,40 @@ confidenceBox.innerText="No Face";
 
 }
 
-/* ===== DESCRIPTOR ===== */
+/* DESCRIPTOR */
 
 async function getDescriptor(){
 
 statusText.innerText="Mendeteksi wajah...";
 
-const detection = await faceapi
+const detection=await faceapi
 .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
 .withFaceLandmarks()
 .withFaceDescriptor();
 
 if(!detection){
+
 statusText.innerText="Wajah tidak terdeteksi";
 hideLoading();
 return null;
+
 }
 
 return Array.from(detection.descriptor);
 
 }
 
-/* ===== ENROLL ===== */
+/* ENROLL */
 
 async function enroll(){
 
 const nama=document.getElementById("nama").value;
 
 if(!nama){
+
 statusText.innerText="Isi nama dulu";
 return;
+
 }
 
 showLoading("Menyimpan wajah...");
@@ -314,7 +377,7 @@ statusText.innerText="Data terkirim";
 
 }
 
-/* ===== DISTANCE ===== */
+/* DISTANCE */
 
 function euclideanDistance(d1,d2){
 
@@ -328,7 +391,7 @@ return Math.sqrt(sum);
 
 }
 
-/* ===== VERIFY ===== */
+/* VERIFY */
 
 async function verify(){
 
@@ -358,9 +421,11 @@ return;
 }
 
 if(!Array.isArray(database)||database.length===0){
+
 hideLoading();
 statusText.innerText="Database kosong";
 return;
+
 }
 
 let bestMatch=null;
