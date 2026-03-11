@@ -99,6 +99,33 @@ font-weight:bold;
 border:1px solid #00e5ff;
 }
 
+/* RESULT TOP CENTER */
+
+.result-box{
+position:absolute;
+top:10px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(0,0,0,0.85);
+padding:10px 20px;
+border-radius:12px;
+font-weight:bold;
+font-size:16px;
+border:2px solid #00e5ff;
+z-index:10;
+display:none;
+}
+
+.result-success{
+border-color:#00ff7b;
+color:#00ff7b;
+}
+
+.result-fail{
+border-color:#ff4d4d;
+color:#ff4d4d;
+}
+
 /* LOADING */
 
 .loading-overlay{
@@ -129,7 +156,7 @@ animation:spin 1s linear infinite;
 100%{transform:rotate(360deg);}
 }
 
-/* CONTROL */
+/* CONTROLS */
 
 .controls{
 padding:20px;
@@ -188,24 +215,24 @@ min-height:24px;
 </div>
 
 <div class="video-wrapper">
+
+<div id="resultBox" class="result-box"></div>
+
 <video id="video" autoplay muted playsinline></video>
 <div class="face-frame" id="faceFrame"></div>
 <div class="confidence" id="confidenceBox">0%</div>
+
 </div>
 
 <div class="controls">
 
 <div id="verifySection">
-
 <button class="verify" onclick="verify()">Verifikasi Wajah</button>
-
 </div>
 
 <div id="enrollSection" style="display:none;">
-
 <input type="text" id="nama" placeholder="Masukkan Nama">
 <button class="enroll" onclick="enroll()">Tambah Wajah</button>
-
 </div>
 
 <div class="status" id="status">Loading model...</div>
@@ -231,10 +258,12 @@ const enrollSection=document.getElementById("enrollSection");
 const tabVerify=document.getElementById("tabVerify");
 const tabEnroll=document.getElementById("tabEnroll");
 
+const resultBox=document.getElementById("resultBox");
+
 const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL="./models";
 
-/* TAB SWITCH */
+/* TAB */
 
 function switchTab(tab){
 
@@ -255,6 +284,27 @@ tabVerify.classList.remove("active");
 tabEnroll.classList.add("active");
 
 }
+
+}
+
+/* RESULT */
+
+function showResult(text,type){
+
+resultBox.style.display="block";
+resultBox.innerText=text;
+
+resultBox.classList.remove("result-success");
+resultBox.classList.remove("result-fail");
+
+if(type==="success") resultBox.classList.add("result-success");
+if(type==="fail") resultBox.classList.add("result-fail");
+
+setTimeout(()=>{
+
+resultBox.style.display="none";
+
+},4000);
 
 }
 
@@ -291,7 +341,7 @@ startFaceDetection();
 
 loadModels();
 
-/* REALTIME DETECT */
+/* DETECTION */
 
 async function startFaceDetection(){
 
@@ -373,7 +423,7 @@ descriptor:descriptor
 
 hideLoading();
 
-statusText.innerText="Data terkirim";
+showResult("Wajah berhasil ditambahkan","success");
 
 }
 
@@ -450,11 +500,11 @@ hideLoading();
 
 if(minDistance<0.6){
 
-statusText.innerText="MATCH : "+bestMatch;
+showResult("MATCH : "+bestMatch,"success");
 
 }else{
 
-statusText.innerText="Tidak dikenali";
+showResult("Wajah tidak dikenali","fail");
 
 }
 
