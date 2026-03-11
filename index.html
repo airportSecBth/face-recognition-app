@@ -3,13 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Face Recognition Pro</title>
+<title>Face Recognition</title>
 
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
-
-*{box-sizing:border-box;}
 
 body{
 margin:0;
@@ -203,13 +201,6 @@ cursor:pointer;
 .enroll{background:#00c853;color:white;}
 .verify{background:#2962ff;color:white;}
 
-.status{
-text-align:center;
-margin-top:10px;
-font-weight:bold;
-min-height:24px;
-}
-
 </style>
 </head>
 
@@ -222,7 +213,7 @@ min-height:24px;
 
 <div class="app">
 
-<div class="header">Face Recognition Pro</div>
+<div class="header">Face Recognition</div>
 
 <div class="tabs">
 <div class="tab active" onclick="switchTab('verify')" id="tabVerify">Verifikasi</div>
@@ -253,8 +244,6 @@ min-height:24px;
 <button class="enroll" onclick="enroll()">Tambah Wajah</button>
 </div>
 
-<div class="status" id="status">Loading model...</div>
-
 </div>
 
 </div>
@@ -262,12 +251,9 @@ min-height:24px;
 <script>
 
 const video=document.getElementById("video");
-const statusText=document.getElementById("status");
-
 const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
-
 const resultBox=document.getElementById("resultBox");
 
 const loading=document.getElementById("loading");
@@ -279,7 +265,7 @@ const enrollSection=document.getElementById("enrollSection");
 const tabVerify=document.getElementById("tabVerify");
 const tabEnroll=document.getElementById("tabEnroll");
 
-const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
+const GAS_URL="PASTE_URL_WEBAPP_ANDA";
 const MODEL_URL="./models";
 
 /* TAB */
@@ -313,8 +299,7 @@ function showResult(text,type){
 resultBox.style.display="block";
 resultBox.innerText=text;
 
-resultBox.classList.remove("result-success");
-resultBox.classList.remove("result-fail");
+resultBox.classList.remove("result-success","result-fail");
 
 if(type==="success") resultBox.classList.add("result-success");
 if(type==="fail") resultBox.classList.add("result-fail");
@@ -338,9 +323,8 @@ loading.style.display="none";
 
 /* CAMERA */
 
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{video.srcObject=stream;})
-.catch(()=>{statusText.innerText="Kamera tidak bisa diakses";});
+navigator.mediaDevices.getUserMedia({video:true})
+.then(stream=>{video.srcObject=stream;});
 
 /* LOAD MODELS */
 
@@ -349,8 +333,6 @@ async function loadModels(){
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-
-statusText.innerText="Siap digunakan";
 
 startFaceDetection();
 
@@ -376,7 +358,7 @@ faceFrame.classList.add("active");
 const percent=Math.round(detection.score*100);
 
 confidenceBox.innerText="Confidence "+percent+"%";
-detectStatus.innerText="Mendeteksi wajah...";
+detectStatus.innerText="Mendeteksi wajah";
 
 }else{
 
@@ -395,19 +377,14 @@ detectStatus.innerText="Tidak ada wajah";
 
 async function getDescriptor(){
 
-statusText.innerText="Mendeteksi wajah...";
-
 const detection=await faceapi
 .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
 .withFaceLandmarks()
 .withFaceDescriptor();
 
 if(!detection){
-
-statusText.innerText="Wajah tidak terdeteksi";
 hideLoading();
 return null;
-
 }
 
 return Array.from(detection.descriptor);
@@ -420,12 +397,7 @@ async function enroll(){
 
 const nama=document.getElementById("nama").value;
 
-if(!nama){
-
-statusText.innerText="Isi nama dulu";
-return;
-
-}
+if(!nama)return;
 
 showLoading("Menyimpan wajah...");
 
@@ -471,48 +443,19 @@ showLoading("Memverifikasi wajah...");
 const descriptor=await getDescriptor();
 if(!descriptor)return;
 
-let response;
-
-try{
-response=await fetch(GAS_URL);
-}catch{
-hideLoading();
-statusText.innerText="Gagal koneksi server";
-return;
-}
-
-let database;
-
-try{
-database=await response.json();
-}catch{
-hideLoading();
-statusText.innerText="Response bukan JSON valid";
-return;
-}
-
-if(!Array.isArray(database)||database.length===0){
-
-hideLoading();
-statusText.innerText="Database kosong";
-return;
-
-}
+let response=await fetch(GAS_URL);
+let database=await response.json();
 
 let bestMatch=null;
 let minDistance=999;
 
 database.forEach(user=>{
 
-if(!user.descriptor)return;
-
 const distance=euclideanDistance(descriptor,user.descriptor);
 
 if(distance<minDistance){
-
 minDistance=distance;
 bestMatch=user.nama;
-
 }
 
 });
