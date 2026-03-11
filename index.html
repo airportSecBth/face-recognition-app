@@ -35,8 +35,6 @@ font-size:22px;
 font-weight:bold;
 }
 
-/* TAB */
-
 .tabs{
 display:flex;
 background:#020617;
@@ -55,8 +53,6 @@ border-bottom:3px solid #00e5ff;
 background:#111827;
 }
 
-/* VIDEO */
-
 .video-wrapper{
 position:relative;
 flex:1;
@@ -70,8 +66,6 @@ video{
 width:100%;
 border-radius:20px;
 background:black;
-
-/* MIRROR CAMERA */
 transform:scaleX(-1);
 }
 
@@ -84,8 +78,6 @@ border-radius:20px;
 pointer-events:none;
 box-shadow:0 0 25px #00e5ff;
 transition:0.3s;
-
-/* MIRROR FRAME */
 transform:scaleX(-1);
 }
 
@@ -93,8 +85,6 @@ transform:scaleX(-1);
 border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
-
-/* CONFIDENCE */
 
 .confidence{
 position:absolute;
@@ -107,8 +97,6 @@ font-weight:bold;
 border:1px solid #00e5ff;
 }
 
-/* DETECT STATUS */
-
 .detect-status{
 position:absolute;
 bottom:10px;
@@ -118,8 +106,6 @@ border-radius:10px;
 font-size:13px;
 border:1px solid #64748b;
 }
-
-/* RESULT TOP */
 
 .result-box{
 position:absolute;
@@ -146,8 +132,6 @@ color:#00ff7b;
 border-color:#ff4d4d;
 color:#ff4d4d;
 }
-
-/* LOADING */
 
 .loading-overlay{
 position:fixed;
@@ -176,8 +160,6 @@ animation:spin 1s linear infinite;
 0%{transform:rotate(0deg);}
 100%{transform:rotate(360deg);}
 }
-
-/* CONTROLS */
 
 .controls{
 padding:20px;
@@ -208,13 +190,6 @@ cursor:pointer;
 
 .enroll{background:#00c853;color:white;}
 .verify{background:#2962ff;color:white;}
-
-.status{
-text-align:center;
-margin-top:10px;
-font-weight:bold;
-min-height:24px;
-}
 
 </style>
 </head>
@@ -259,8 +234,6 @@ min-height:24px;
 <button class="enroll" onclick="enroll()">Tambah Wajah</button>
 </div>
 
-<div class="status" id="status">Loading model...</div>
-
 </div>
 
 </div>
@@ -268,12 +241,9 @@ min-height:24px;
 <script>
 
 const video=document.getElementById("video");
-const statusText=document.getElementById("status");
-
 const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
-
 const resultBox=document.getElementById("resultBox");
 
 const loading=document.getElementById("loading");
@@ -288,31 +258,23 @@ const tabEnroll=document.getElementById("tabEnroll");
 const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL="./models";
 
-/* TAB */
+let faceDetected=false;
 
 function switchTab(tab){
 
 if(tab==="verify"){
-
 verifySection.style.display="block";
 enrollSection.style.display="none";
-
 tabVerify.classList.add("active");
 tabEnroll.classList.remove("active");
-
 }else{
-
 verifySection.style.display="none";
 enrollSection.style.display="block";
-
 tabVerify.classList.remove("active");
 tabEnroll.classList.add("active");
-
 }
 
 }
-
-/* RESULT */
 
 function showResult(text,type){
 
@@ -328,7 +290,9 @@ setTimeout(()=>{resultBox.style.display="none";},4000);
 
 }
 
-/* LOADING */
+function showWarning(){
+showResult("Posisikan wajah di dalam frame sampai indikator hijau","fail");
+}
 
 function showLoading(text){
 loading.style.display="flex";
@@ -339,13 +303,8 @@ function hideLoading(){
 loading.style.display="none";
 }
 
-/* CAMERA */
-
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{video.srcObject=stream;})
-.catch(()=>{statusText.innerText="Kamera tidak bisa diakses";});
-
-/* LOAD MODELS */
+.then(stream=>{video.srcObject=stream;});
 
 async function loadModels(){
 
@@ -353,15 +312,11 @@ await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 
-statusText.innerText="Siap digunakan";
-
 startFaceDetection();
 
 }
 
 loadModels();
-
-/* DETECTION */
 
 async function startFaceDetection(){
 
@@ -374,6 +329,8 @@ new faceapi.TinyFaceDetectorOptions()
 
 if(detection){
 
+faceDetected=true;
+
 faceFrame.classList.add("active");
 
 const percent=Math.round(detection.score*100);
@@ -382,6 +339,8 @@ confidenceBox.innerText="Confidence "+percent+"%";
 detectStatus.innerText="Mendeteksi wajah...";
 
 }else{
+
+faceDetected=false;
 
 faceFrame.classList.remove("active");
 
@@ -393,8 +352,6 @@ detectStatus.innerText="Tidak ada wajah";
 },500);
 
 }
-
-/* DESCRIPTOR */
 
 async function getDescriptor(){
 
@@ -412,13 +369,16 @@ return Array.from(detection.descriptor);
 
 }
 
-/* ENROLL */
-
 async function enroll(){
+
+if(!faceDetected){
+showWarning();
+return;
+}
 
 const nama=document.getElementById("nama").value;
 
-if(!nama) return;
+if(!nama)return;
 
 showLoading("Menyimpan wajah...");
 
@@ -441,8 +401,6 @@ showResult("Wajah berhasil ditambahkan","success");
 
 }
 
-/* DISTANCE */
-
 function euclideanDistance(d1,d2){
 
 let sum=0;
@@ -455,9 +413,12 @@ return Math.sqrt(sum);
 
 }
 
-/* VERIFY */
-
 async function verify(){
+
+if(!faceDetected){
+showWarning();
+return;
+}
 
 showLoading("Memverifikasi wajah...");
 
