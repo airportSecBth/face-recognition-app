@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Face Recognition</title>
+<title>Face Recognition Pro</title>
 
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
+
+*{box-sizing:border-box;}
 
 body{
 margin:0;
@@ -68,6 +70,9 @@ video{
 width:100%;
 border-radius:20px;
 background:black;
+
+/* MIRROR CAMERA */
+transform:scaleX(-1);
 }
 
 .face-frame{
@@ -79,6 +84,9 @@ border-radius:20px;
 pointer-events:none;
 box-shadow:0 0 25px #00e5ff;
 transition:0.3s;
+
+/* MIRROR FRAME */
+transform:scaleX(-1);
 }
 
 .face-frame.active{
@@ -201,6 +209,13 @@ cursor:pointer;
 .enroll{background:#00c853;color:white;}
 .verify{background:#2962ff;color:white;}
 
+.status{
+text-align:center;
+margin-top:10px;
+font-weight:bold;
+min-height:24px;
+}
+
 </style>
 </head>
 
@@ -213,7 +228,7 @@ cursor:pointer;
 
 <div class="app">
 
-<div class="header">Face Recognition</div>
+<div class="header">Face Recognition Pro</div>
 
 <div class="tabs">
 <div class="tab active" onclick="switchTab('verify')" id="tabVerify">Verifikasi</div>
@@ -244,6 +259,8 @@ cursor:pointer;
 <button class="enroll" onclick="enroll()">Tambah Wajah</button>
 </div>
 
+<div class="status" id="status">Loading model...</div>
+
 </div>
 
 </div>
@@ -251,9 +268,12 @@ cursor:pointer;
 <script>
 
 const video=document.getElementById("video");
+const statusText=document.getElementById("status");
+
 const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
+
 const resultBox=document.getElementById("resultBox");
 
 const loading=document.getElementById("loading");
@@ -265,7 +285,7 @@ const enrollSection=document.getElementById("enrollSection");
 const tabVerify=document.getElementById("tabVerify");
 const tabEnroll=document.getElementById("tabEnroll");
 
-const GAS_URL="PASTE_URL_WEBAPP_ANDA";
+const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL="./models";
 
 /* TAB */
@@ -304,9 +324,7 @@ resultBox.classList.remove("result-success","result-fail");
 if(type==="success") resultBox.classList.add("result-success");
 if(type==="fail") resultBox.classList.add("result-fail");
 
-setTimeout(()=>{
-resultBox.style.display="none";
-},4000);
+setTimeout(()=>{resultBox.style.display="none";},4000);
 
 }
 
@@ -323,8 +341,9 @@ loading.style.display="none";
 
 /* CAMERA */
 
-navigator.mediaDevices.getUserMedia({video:true})
-.then(stream=>{video.srcObject=stream;});
+navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
+.then(stream=>{video.srcObject=stream;})
+.catch(()=>{statusText.innerText="Kamera tidak bisa diakses";});
 
 /* LOAD MODELS */
 
@@ -333,6 +352,8 @@ async function loadModels(){
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+statusText.innerText="Siap digunakan";
 
 startFaceDetection();
 
@@ -358,7 +379,7 @@ faceFrame.classList.add("active");
 const percent=Math.round(detection.score*100);
 
 confidenceBox.innerText="Confidence "+percent+"%";
-detectStatus.innerText="Mendeteksi wajah";
+detectStatus.innerText="Mendeteksi wajah...";
 
 }else{
 
@@ -397,7 +418,7 @@ async function enroll(){
 
 const nama=document.getElementById("nama").value;
 
-if(!nama)return;
+if(!nama) return;
 
 showLoading("Menyimpan wajah...");
 
@@ -463,13 +484,9 @@ bestMatch=user.nama;
 hideLoading();
 
 if(minDistance<0.6){
-
 showResult("MATCH : "+bestMatch,"success");
-
 }else{
-
 showResult("Wajah tidak dikenali","fail");
-
 }
 
 }
