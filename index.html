@@ -86,16 +86,7 @@ border:1px solid #00e5ff;
 
 #confidenceBox{
 font-weight:bold;
-}
-
-/* COLOR CONFIDENCE */
-
-.conf-red{
-color:#ff4d4d;
-}
-
-.conf-yellow{
-color:#ffd43b;
+color:#00e5ff;
 }
 
 .conf-green{
@@ -133,43 +124,10 @@ border-color:#ff4d4d;
 color:#ff4d4d;
 }
 
-.loading-overlay{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.7);
-display:none;
-justify-content:center;
-align-items:center;
-flex-direction:column;
-z-index:999;
-}
-
-.spinner{
-width:60px;
-height:60px;
-border:6px solid rgba(255,255,255,0.2);
-border-top:6px solid #00e5ff;
-border-radius:50%;
-animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
-0%{transform:rotate(0deg);}
-100%{transform:rotate(360deg);}
-}
-
 </style>
 </head>
 
 <body>
-
-<div class="loading-overlay" id="loading">
-<div class="spinner"></div>
-<div id="loadingText">Processing...</div>
-</div>
 
 <div class="app">
 
@@ -202,15 +160,11 @@ const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
 const resultBox=document.getElementById("resultBox");
 
-const loading=document.getElementById("loading");
-const loadingText=document.getElementById("loadingText");
-
 const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL="./models";
 
 let database=[];
 let verifying=false;
-let faceDetected=false;
 
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 .then(stream=>{video.srcObject=stream;});
@@ -229,15 +183,6 @@ setTimeout(()=>{resultBox.style.display="none";},3000);
 
 }
 
-function showLoading(text){
-loading.style.display="flex";
-loadingText.innerText=text;
-}
-
-function hideLoading(){
-loading.style.display="none";
-}
-
 async function loadModels(){
 
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
@@ -253,7 +198,7 @@ startFaceDetection();
 
 loadModels();
 
-/* FAST DETECTOR */
+/* DETECTOR LEBIH CEPAT */
 
 const detectorOptions=
 new faceapi.TinyFaceDetectorOptions({
@@ -274,8 +219,6 @@ detectorOptions
 
 if(detection){
 
-faceDetected=true;
-
 faceFrame.classList.add("active");
 
 const percent=Math.round(detection.score*100);
@@ -283,58 +226,34 @@ const percent=Math.round(detection.score*100);
 confidenceBox.innerText="Confidence "+percent+"%";
 detectStatus.innerText="Wajah terdeteksi";
 
-/* RESET COLOR */
+/* WARNA CONFIDENCE */
 
-confidenceBox.classList.remove(
-"conf-red",
-"conf-yellow",
-"conf-green"
-);
+confidenceBox.classList.remove("conf-green");
 
-/* COLOR SYSTEM */
-
-if(percent<60){
-
-confidenceBox.classList.add("conf-red");
-
-}
-else if(percent<80){
-
-confidenceBox.classList.add("conf-yellow");
-
-}
-else{
+if(percent>=75){
 
 confidenceBox.classList.add("conf-green");
 
-}
-
-/* AUTO VERIFY */
-
-if(percent>85){
+/* AUTO VERIFY LEBIH CEPAT */
 
 autoVerify();
 
 }
 
-}else{
+/* jika <75 tetap biru */
 
-faceDetected=false;
+}else{
 
 faceFrame.classList.remove("active");
 
 confidenceBox.innerText="Confidence 0%";
 detectStatus.innerText="Tidak ada wajah";
 
-confidenceBox.classList.remove(
-"conf-red",
-"conf-yellow",
-"conf-green"
-);
+confidenceBox.classList.remove("conf-green");
 
 }
 
-},70); /* SUPER FAST SCAN */
+},60); /* SCAN SUPER CEPAT */
 
 }
 
@@ -404,7 +323,7 @@ showResult("Wajah tidak dikenali","fail");
 
 setTimeout(()=>{
 verifying=false;
-},3000);
+},2000);
 
 }
 
