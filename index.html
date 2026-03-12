@@ -36,33 +36,24 @@ justify-content:center;
 z-index:999;
 }
 
-.loader-frame{
-width:200px;
-height:260px;
-border:3px solid #00e5ff;
-border-radius:20px;
-position:relative;
-overflow:hidden;
-box-shadow:0 0 25px #00e5ff;
+.spinner{
+width:60px;
+height:60px;
+border:6px solid #1e293b;
+border-top:6px solid #00e5ff;
+border-radius:50%;
+animation:spin 1s linear infinite;
 }
 
-.loader-line{
-position:absolute;
-width:100%;
-height:3px;
-background:#00ff7b;
-animation:scanAnim 2s linear infinite;
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
 }
 
-@keyframes scanAnim{
-0%{top:0}
-100%{top:100%}
-}
-
-.loading-text{
-margin-top:20px;
-font-size:16px;
+.loadingText{
+margin-top:15px;
 color:#00e5ff;
+font-size:16px;
 }
 
 /* APP */
@@ -125,7 +116,8 @@ position:absolute;
 width:100%;
 height:3px;
 background:#00ff7b;
-animation:scanAnim 2s linear infinite;
+top:0;
+animation:scan 2s linear infinite;
 opacity:0;
 }
 
@@ -133,7 +125,10 @@ opacity:0;
 opacity:1;
 }
 
-/* INFO */
+@keyframes scan{
+0%{top:0;}
+100%{top:100%;}
+}
 
 .frame-info{
 position:absolute;
@@ -197,15 +192,8 @@ color:#ff4d4d;
 <!-- LOADING -->
 
 <div id="loadingScreen">
-
-<div class="loader-frame">
-<div class="loader-line"></div>
-</div>
-
-<div class="loading-text">
-Loading AI Model...
-</div>
-
+<div class="spinner"></div>
+<div class="loadingText">Loading AI Model...</div>
 </div>
 
 
@@ -231,6 +219,7 @@ Loading AI Model...
 </div>
 
 </div>
+
 </div>
 
 <script>
