@@ -26,16 +26,12 @@ display:flex;
 flex-direction:column;
 }
 
-/* HEADER */
-
 .header{
 padding:20px;
 text-align:center;
 font-size:22px;
 font-weight:bold;
 }
-
-/* VIDEO */
 
 .video-wrapper{
 position:relative;
@@ -53,8 +49,6 @@ background:black;
 transform:scaleX(-1);
 }
 
-/* FACE FRAME */
-
 .face-frame{
 position:absolute;
 width:220px;
@@ -70,8 +64,6 @@ pointer-events:none;
 border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
-
-/* RESULT */
 
 .result-box{
 position:absolute;
@@ -96,8 +88,6 @@ border-color:#ff4d4d;
 color:#ff4d4d;
 }
 
-/* INFO */
-
 .info{
 position:absolute;
 bottom:10px;
@@ -112,7 +102,7 @@ text-align:center;
 
 /* LOADING SCREEN */
 
-.loading-screen{
+#loadingOverlay{
 position:fixed;
 top:0;
 left:0;
@@ -123,17 +113,17 @@ display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-z-index:999;
+z-index:9999;
 }
 
 .scan-box{
-width:200px;
-height:260px;
+width:180px;
+height:240px;
 border:3px solid #00e5ff;
 border-radius:20px;
 position:relative;
 overflow:hidden;
-box-shadow:0 0 30px #00e5ff;
+box-shadow:0 0 25px #00e5ff;
 }
 
 .scan-line{
@@ -145,14 +135,11 @@ animation:scan 2s linear infinite;
 }
 
 @keyframes scan{
-
 0%{top:0}
-
 100%{top:100%}
-
 }
 
-.loading-text{
+#loadingText{
 margin-top:20px;
 font-size:16px;
 color:#00e5ff;
@@ -163,13 +150,15 @@ color:#00e5ff;
 
 <body>
 
-<div class="loading-screen" id="loadingScreen">
+<!-- LOADING -->
+
+<div id="loadingOverlay">
 
 <div class="scan-box">
 <div class="scan-line"></div>
 </div>
 
-<div class="loading-text" id="loadingText">
+<div id="loadingText">
 Memuat AI Model...
 </div>
 
@@ -204,7 +193,7 @@ const resultBox=document.getElementById("resultBox")
 const confidenceBox=document.getElementById("confidence")
 const statusBox=document.getElementById("status")
 
-const loadingScreen=document.getElementById("loadingScreen")
+const loadingOverlay=document.getElementById("loadingOverlay")
 const loadingText=document.getElementById("loadingText")
 
 const GAS_URL="YOUR_GAS_URL"
@@ -217,14 +206,10 @@ let verifying=false
 let frameCount=0
 let lastBox=null
 
-/* CAMERA */
-
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 .then(stream=>{
 video.srcObject=stream
 })
-
-/* RESULT */
 
 function showResult(text,type){
 
@@ -237,55 +222,69 @@ if(type==="success") resultBox.classList.add("result-success")
 if(type==="fail") resultBox.classList.add("result-fail")
 
 setTimeout(()=>{
-
 resultBox.style.display="none"
-
 },3000)
 
 }
 
-/* LOAD MODELS */
-
 async function loadModels(){
 
-loadingText.innerText="Loading TinyFaceDetector..."
+try{
 
+loadingText.innerText="Loading TinyFaceDetector..."
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
 
 loadingText.innerText="Loading Landmark Model..."
-
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
 
 loadingText.innerText="Loading Recognition Model..."
-
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
 
 loadingText.innerText="Loading Database..."
 
+try{
+
 let res=await fetch(GAS_URL)
+
+if(res.ok){
+
 database=await res.json()
 
 database.forEach(user=>{
-
 descriptorCache.push({
 nama:user.nama,
 descriptor:new Float32Array(user.descriptor)
 })
-
 })
 
-loadingText.innerText="AI Ready ✔"
+loadingText.innerText="Database loaded"
 
-/* HIDE LOADING */
+}else{
+
+loadingText.innerText="Database gagal load"
+}
+
+}catch(e){
+
+loadingText.innerText="Database tidak tersedia"
+
+}
 
 setTimeout(()=>{
 
-loadingScreen.style.display="none"
+loadingOverlay.style.display="none"
 statusBox.innerText="AI siap - arahkan wajah"
 
 startCamera()
 
-},1000)
+},800)
+
+}catch(err){
+
+loadingText.innerText="Model gagal dimuat"
+console.error(err)
+
+}
 
 }
 
@@ -294,12 +293,9 @@ loadModels()
 async function startCamera(){
 
 await video.play()
-
 detectLoop()
 
 }
-
-/* DETECTOR */
 
 const detectorOptions=
 new faceapi.TinyFaceDetectorOptions({
@@ -310,8 +306,6 @@ scoreThreshold:0.5
 async function detectLoop(){
 
 frameCount++
-
-/* SKIP FRAME */
 
 if(frameCount % 3 !==0){
 
@@ -369,8 +363,6 @@ requestAnimationFrame(detectLoop)
 
 }
 
-/* DISTANCE */
-
 function fastDistance(d1,d2){
 
 let sum=0
@@ -378,7 +370,6 @@ let sum=0
 for(let i=0;i<128;i++){
 
 let diff=d1[i]-d2[i]
-
 sum+=diff*diff
 
 }
@@ -386,8 +377,6 @@ sum+=diff*diff
 return sum
 
 }
-
-/* VERIFY */
 
 async function verifyFace(descriptor){
 
@@ -426,9 +415,7 @@ showResult("Wajah tidak dikenali","fail")
 }
 
 setTimeout(()=>{
-
 verifying=false
-
 },2000)
 
 }
