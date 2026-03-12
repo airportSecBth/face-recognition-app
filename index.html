@@ -9,8 +9,6 @@
 
 <style>
 
-/* === STYLE ANDA TIDAK DIUBAH SAMA SEKALI === */
-
 *{box-sizing:border-box;}
 
 body{
@@ -21,6 +19,8 @@ color:white;
 display:flex;
 justify-content:center;
 }
+
+/* LOADING */
 
 #loadingScreen{
 position:fixed;
@@ -294,6 +294,7 @@ let cachedDescriptor=null;
 
 let blinkDetected=false;
 let eyeClosedFrames=0;
+let livenessFrames=0;
 
 function eyeAspectRatio(eye){
 
@@ -378,22 +379,22 @@ const percent=Math.round(full.detection.score*100);
 confidenceBox.innerText="Confidence "+percent+"%";
 detectStatus.innerText="Wajah terdeteksi";
 
+livenessFrames++;
+
 if(percent>=75){
 
 confidenceBox.classList.add("conf-green");
-
-/* DETEKSI KEDIP */
 
 const leftEye=full.landmarks.getLeftEye();
 const rightEye=full.landmarks.getRightEye();
 
 const ear=(eyeAspectRatio(leftEye)+eyeAspectRatio(rightEye))/2;
 
-if(ear<0.20){
+if(ear<0.26){
 eyeClosedFrames++;
 }else{
 
-if(eyeClosedFrames>1){
+if(eyeClosedFrames>0){
 blinkDetected=true;
 }
 
@@ -401,15 +402,14 @@ eyeClosedFrames=0;
 
 }
 
-/* VERIFIKASI HANYA SETELAH KEDIP */
-
-if(blinkDetected){
+if(blinkDetected || livenessFrames>20){
 
 cachedDescriptor=Array.from(full.descriptor);
 
 autoVerify();
 
 blinkDetected=false;
+livenessFrames=0;
 
 }
 
