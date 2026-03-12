@@ -51,6 +51,8 @@ background:black;
 transform:scaleX(-1);
 }
 
+/* FRAME WAJAH */
+
 .face-frame{
 position:absolute;
 width:220px;
@@ -60,10 +62,6 @@ border-radius:20px;
 pointer-events:none;
 box-shadow:0 0 25px #00e5ff;
 transition:0.3s;
-transform:scaleX(-1);
-display:flex;
-justify-content:center;
-align-items:flex-end;
 }
 
 .face-frame.active{
@@ -71,18 +69,23 @@ border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
 
-.frame-info{
+/* LABEL LUAR FRAME */
+
+.frame-label{
 position:absolute;
-bottom:10px;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
 display:flex;
 flex-direction:column;
 align-items:center;
-gap:3px;
-font-size:13px;
-background:rgba(0,0,0,0.6);
-padding:6px 10px;
-border-radius:10px;
+gap:4px;
+background:rgba(0,0,0,0.65);
+padding:8px 14px;
+border-radius:12px;
 border:1px solid #00e5ff;
+font-size:13px;
+min-width:160px;
 }
 
 #confidenceBox{
@@ -93,6 +96,8 @@ font-weight:bold;
 font-size:12px;
 color:#cbd5f5;
 }
+
+/* RESULT BOX */
 
 .result-box{
 position:absolute;
@@ -119,6 +124,8 @@ color:#00ff7b;
 border-color:#ff4d4d;
 color:#ff4d4d;
 }
+
+/* LOADING */
 
 .loading-overlay{
 position:fixed;
@@ -168,13 +175,12 @@ animation:spin 1s linear infinite;
 
 <video id="video" autoplay muted playsinline></video>
 
-<div class="face-frame" id="faceFrame">
+<div class="face-frame" id="faceFrame"></div>
 
-<div class="frame-info">
+<!-- LABEL LUAR FRAME -->
+<div class="frame-label">
 <div id="confidenceBox">Confidence 0%</div>
 <div id="detectStatus">Tidak ada wajah</div>
-</div>
-
 </div>
 
 </div>
@@ -197,7 +203,6 @@ const MODEL_URL="./models";
 
 let database=[];
 let verifying=false;
-let faceDetected=false;
 
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 .then(stream=>{video.srcObject=stream;});
@@ -214,15 +219,6 @@ if(type==="fail") resultBox.classList.add("result-fail");
 
 setTimeout(()=>{resultBox.style.display="none";},3000);
 
-}
-
-function showLoading(text){
-loading.style.display="flex";
-loadingText.innerText=text;
-}
-
-function hideLoading(){
-loading.style.display="none";
 }
 
 async function loadModels(){
@@ -259,8 +255,6 @@ detectorOptions
 
 if(detection){
 
-faceDetected=true;
-
 faceFrame.classList.add("active");
 
 const percent=Math.round(detection.score*100);
@@ -269,14 +263,10 @@ confidenceBox.innerText="Confidence "+percent+"%";
 detectStatus.innerText="Wajah terdeteksi";
 
 if(percent>85){
-
 autoVerify();
-
 }
 
 }else{
-
-faceDetected=false;
 
 faceFrame.classList.remove("active");
 
