@@ -53,6 +53,7 @@ animation:spin 1s linear infinite;
 .loadingText{
 margin-top:15px;
 color:#00e5ff;
+font-size:16px;
 }
 
 /* APP */
@@ -112,11 +113,12 @@ box-shadow:0 0 25px #00ff7b;
 
 .scan-line{
 position:absolute;
+top:0;
+left:0;
 width:100%;
 height:3px;
 background:#00ff7b;
-top:0;
-animation:scan 2s linear infinite;
+animation:scanMove 2s linear infinite;
 opacity:0;
 }
 
@@ -124,7 +126,7 @@ opacity:0;
 opacity:1;
 }
 
-@keyframes scan{
+@keyframes scanMove{
 0%{top:0;}
 100%{top:100%;}
 }
@@ -188,7 +190,7 @@ color:#ff4d4d;
 
 <body>
 
-<!-- LOADING -->
+<!-- LOADING SCREEN -->
 
 <div id="loadingScreen">
 <div class="spinner"></div>
@@ -227,7 +229,6 @@ const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
 const resultBox=document.getElementById("resultBox");
-const loadingScreen=document.getElementById("loadingScreen");
 
 const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL="./models";
@@ -235,6 +236,11 @@ const MODEL_URL="./models";
 let database=[];
 let verifying=false;
 let cachedDescriptor=null;
+
+/* KAMERA TETAP SEPERTI ASLI */
+
+navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
+.then(stream=>{video.srcObject=stream;});
 
 function showResult(text,type){
 
@@ -259,17 +265,11 @@ await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 let response=await fetch(GAS_URL);
 database=await response.json();
 
-/* LOADING SELESAI */
+/* HIDE LOADING */
 
-loadingScreen.style.display="none";
+document.getElementById("loadingScreen").style.display="none";
 
-/* BARU AKTIFKAN KAMERA */
-
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{
-video.srcObject=stream;
 startFaceDetection();
-});
 
 }
 
