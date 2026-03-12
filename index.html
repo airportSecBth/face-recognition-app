@@ -53,7 +53,6 @@ animation:spin 1s linear infinite;
 .loadingText{
 margin-top:15px;
 color:#00e5ff;
-font-size:16px;
 }
 
 /* APP */
@@ -98,10 +97,10 @@ border-radius:20px;
 pointer-events:none;
 box-shadow:0 0 25px #00e5ff;
 transition:0.3s;
-overflow:hidden;
 display:flex;
 justify-content:center;
 align-items:flex-end;
+overflow:hidden;
 }
 
 .face-frame.active{
@@ -196,7 +195,6 @@ color:#ff4d4d;
 <div class="loadingText">Loading AI Model...</div>
 </div>
 
-
 <div class="app">
 
 <div class="header">Face Recognition Pro</div>
@@ -265,7 +263,7 @@ database=await response.json();
 
 loadingScreen.style.display="none";
 
-/* AKTIFKAN KAMERA */
+/* BARU AKTIFKAN KAMERA */
 
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 .then(stream=>{
