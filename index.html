@@ -35,7 +35,7 @@ font-size:22px;
 font-weight:bold;
 }
 
-/* TAB */
+/* TABS */
 
 .tabs{
 display:flex;
@@ -73,7 +73,7 @@ background:black;
 transform:scaleX(-1);
 }
 
-/* FRAME */
+/* FACE FRAME */
 
 .face-frame{
 position:absolute;
@@ -84,6 +84,10 @@ border-radius:20px;
 pointer-events:none;
 box-shadow:0 0 25px #00e5ff;
 transition:0.3s;
+display:flex;
+justify-content:center;
+align-items:center;
+overflow:hidden;
 }
 
 .face-frame.active{
@@ -91,36 +95,62 @@ border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
 
-/* CONFIDENCE */
+/* SCAN LINE */
 
-.confidence{
+.scan-line{
 position:absolute;
-top:calc(50% + 160px);
+top:0;
+left:0;
+width:100%;
+height:3px;
+background:#ff2bd6;
+box-shadow:0 0 10px #ff2bd6,0 0 20px #ff2bd6;
+animation:scanMove 2s linear infinite;
+opacity:0;
+}
+
+.face-frame.active .scan-line{
+opacity:1;
+}
+
+@keyframes scanMove{
+0%{top:0;}
+100%{top:100%;}
+}
+
+/* INFO BOX */
+
+.frame-info{
+position:absolute;
+bottom:20px;
 left:50%;
 transform:translateX(-50%);
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:4px;
+font-size:14px;
 background:rgba(0,0,0,0.6);
 padding:8px 14px;
 border-radius:10px;
-font-size:14px;
-font-weight:bold;
 border:1px solid #00e5ff;
 }
 
-/* STATUS */
-
-.detect-status{
-position:absolute;
-top:calc(50% + 200px);
-left:50%;
-transform:translateX(-50%);
-background:rgba(0,0,0,0.6);
-padding:6px 12px;
-border-radius:10px;
-font-size:13px;
-border:1px solid #64748b;
+#confidenceBox{
+font-weight:bold;
+color:#00e5ff;
 }
 
-/* RESULT */
+.conf-green{
+color:#00ff7b;
+}
+
+#detectStatus{
+font-size:13px;
+color:#cbd5f5;
+}
+
+/* RESULT TOP */
 
 .result-box{
 position:absolute;
@@ -207,10 +237,14 @@ min-height:24px;
 
 <video id="video" autoplay muted playsinline></video>
 
-<div class="face-frame" id="faceFrame"></div>
+<div class="face-frame" id="faceFrame">
+<div class="scan-line"></div>
+</div>
 
-<div class="confidence" id="confidenceBox">Confidence 0%</div>
-<div class="detect-status" id="detectStatus">Menunggu kamera...</div>
+<div class="frame-info">
+<div id="confidenceBox">Confidence 0%</div>
+<div id="detectStatus">Menunggu kamera...</div>
+</div>
 
 </div>
 
@@ -234,13 +268,11 @@ min-height:24px;
 <script>
 
 const video=document.getElementById("video");
-const statusText=document.getElementById("status");
-
 const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
-
 const resultBox=document.getElementById("resultBox");
+const statusText=document.getElementById("status");
 
 const verifySection=document.getElementById("verifySection");
 const enrollSection=document.getElementById("enrollSection");
@@ -248,12 +280,19 @@ const enrollSection=document.getElementById("enrollSection");
 const tabVerify=document.getElementById("tabVerify");
 const tabEnroll=document.getElementById("tabEnroll");
 
-const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
+const GAS_URL="YOUR_GAS_URL";
 const MODEL_URL="./models";
 
-/* TAB */
+let database=[];
+let verifying=false;
+let cachedDescriptor=null;
+let currentTab="verify";
+
+/* SWITCH TAB */
 
 function switchTab(tab){
+
+currentTab=tab;
 
 if(tab==="verify"){
 
@@ -289,23 +328,25 @@ if(type==="fail") resultBox.classList.add("result-fail");
 
 setTimeout(()=>{
 resultBox.style.display="none";
-},4000);
+},3000);
 
 }
 
 /* CAMERA */
 
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{video.srcObject=stream;})
-.catch(()=>{statusText.innerText="Kamera tidak bisa diakses";});
+.then(stream=>{video.srcObject=stream;});
 
-/* LOAD MODEL */
+/* LOAD MODELS */
 
 async function loadModels(){
 
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+let response=await fetch(GAS_URL);
+database=await response.json();
 
 statusText.innerText="Siap digunakan";
 
@@ -319,11 +360,11 @@ loadModels();
 
 async function startFaceDetection(){
 
-setInterval(async()=>{
+async function detect(){
 
 const detection=await faceapi.detectSingleFace(
 video,
-new faceapi.TinyFaceDetectorOptions()
+new faceapi.TinyFaceDetectorOptions({inputSize:128})
 );
 
 if(detection){
@@ -335,6 +376,23 @@ const percent=Math.round(detection.score*100);
 confidenceBox.innerText="Confidence "+percent+"%";
 detectStatus.innerText="Wajah terdeteksi";
 
+if(percent>=75 && currentTab==="verify" && !verifying){
+
+const full=await faceapi
+.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
+.withFaceLandmarks()
+.withFaceDescriptor();
+
+if(full){
+
+cachedDescriptor=Array.from(full.descriptor);
+
+autoVerify();
+
+}
+
+}
+
 }else{
 
 faceFrame.classList.remove("active");
@@ -344,11 +402,67 @@ detectStatus.innerText="Tidak ada wajah";
 
 }
 
-},400);
+requestAnimationFrame(detect);
 
 }
 
-/* DESCRIPTOR */
+detect();
+
+}
+
+/* DISTANCE */
+
+function euclideanDistance(d1,d2){
+
+let sum=0;
+
+for(let i=0;i<d1.length;i++){
+sum+=Math.pow(d1[i]-d2[i],2);
+}
+
+return Math.sqrt(sum);
+
+}
+
+/* AUTO VERIFY */
+
+async function autoVerify(){
+
+if(verifying || !cachedDescriptor) return;
+
+verifying=true;
+
+detectStatus.innerText="Memverifikasi...";
+
+let bestMatch=null;
+let minDistance=999;
+
+database.forEach(user=>{
+
+const distance=euclideanDistance(cachedDescriptor,user.descriptor);
+
+if(distance<minDistance){
+minDistance=distance;
+bestMatch=user.nama;
+}
+
+});
+
+if(minDistance<0.6){
+
+showResult("MATCH : "+bestMatch,"success");
+
+}else{
+
+showResult("Wajah tidak dikenali","fail");
+
+}
+
+setTimeout(()=>{verifying=false;},2000);
+
+}
+
+/* GET DESCRIPTOR */
 
 async function getDescriptor(){
 
@@ -358,10 +472,8 @@ const detection=await faceapi
 .withFaceDescriptor();
 
 if(!detection){
-
 statusText.innerText="Wajah tidak terdeteksi";
 return null;
-
 }
 
 return Array.from(detection.descriptor);
@@ -380,7 +492,7 @@ return;
 }
 
 const descriptor=await getDescriptor();
-if(!descriptor)return;
+if(!descriptor) return;
 
 fetch(GAS_URL,{
 method:"POST",
@@ -396,70 +508,11 @@ showResult("Wajah berhasil ditambahkan","success");
 
 }
 
-/* DISTANCE */
-
-function euclideanDistance(d1,d2){
-
-let sum=0;
-
-for(let i=0;i<d1.length;i++){
-sum+=Math.pow(d1[i]-d2[i],2);
-}
-
-return Math.sqrt(sum);
-
-}
-
-/* VERIFY */
+/* VERIFY BUTTON */
 
 async function verify(){
 
-const descriptor=await getDescriptor();
-if(!descriptor)return;
-
-let response;
-
-try{
-response=await fetch(GAS_URL);
-}catch{
-statusText.innerText="Gagal koneksi server";
-return;
-}
-
-let database;
-
-try{
-database=await response.json();
-}catch{
-statusText.innerText="Response bukan JSON valid";
-return;
-}
-
-let bestMatch=null;
-let minDistance=999;
-
-database.forEach(user=>{
-
-if(!user.descriptor)return;
-
-const distance=euclideanDistance(descriptor,user.descriptor);
-
-if(distance<minDistance){
-minDistance=distance;
-bestMatch=user.nama;
-}
-
-});
-
-if(minDistance<0.6){
-
-showResult("MATCH : "+bestMatch,"success");
-
-}else{
-
-showResult("Wajah tidak dikenali","fail");
-
-}
+autoVerify();
 
 }
 
