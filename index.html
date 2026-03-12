@@ -26,12 +26,16 @@ display:flex;
 flex-direction:column;
 }
 
+/* HEADER */
+
 .header{
 padding:20px;
 text-align:center;
 font-size:22px;
 font-weight:bold;
 }
+
+/* VIDEO */
 
 .video-wrapper{
 position:relative;
@@ -49,6 +53,8 @@ background:black;
 transform:scaleX(-1);
 }
 
+/* FACE FRAME */
+
 .face-frame{
 position:absolute;
 width:220px;
@@ -64,6 +70,8 @@ pointer-events:none;
 border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
+
+/* RESULT */
 
 .result-box{
 position:absolute;
@@ -88,6 +96,8 @@ border-color:#ff4d4d;
 color:#ff4d4d;
 }
 
+/* INFO */
+
 .info{
 position:absolute;
 bottom:10px;
@@ -100,10 +110,70 @@ font-size:13px;
 text-align:center;
 }
 
+/* LOADING SCREEN */
+
+.loading-screen{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#0f172a;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:999;
+}
+
+.scan-box{
+width:200px;
+height:260px;
+border:3px solid #00e5ff;
+border-radius:20px;
+position:relative;
+overflow:hidden;
+box-shadow:0 0 30px #00e5ff;
+}
+
+.scan-line{
+position:absolute;
+width:100%;
+height:3px;
+background:#00ff7b;
+animation:scan 2s linear infinite;
+}
+
+@keyframes scan{
+
+0%{top:0}
+
+100%{top:100%}
+
+}
+
+.loading-text{
+margin-top:20px;
+font-size:16px;
+color:#00e5ff;
+}
+
 </style>
 </head>
 
 <body>
+
+<div class="loading-screen" id="loadingScreen">
+
+<div class="scan-box">
+<div class="scan-line"></div>
+</div>
+
+<div class="loading-text" id="loadingText">
+Memuat AI Model...
+</div>
+
+</div>
 
 <div class="app">
 
@@ -119,7 +189,7 @@ text-align:center;
 
 <div class="info">
 <div id="confidence">Confidence 0%</div>
-<div id="status">Tidak ada wajah</div>
+<div id="status">Menunggu AI siap...</div>
 </div>
 
 </div>
@@ -134,6 +204,9 @@ const resultBox=document.getElementById("resultBox")
 const confidenceBox=document.getElementById("confidence")
 const statusBox=document.getElementById("status")
 
+const loadingScreen=document.getElementById("loadingScreen")
+const loadingText=document.getElementById("loadingText")
+
 const GAS_URL="YOUR_GAS_URL"
 const MODEL_URL="./models"
 
@@ -144,10 +217,14 @@ let verifying=false
 let frameCount=0
 let lastBox=null
 
+/* CAMERA */
+
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 .then(stream=>{
 video.srcObject=stream
 })
+
+/* RESULT */
 
 function showResult(text,type){
 
@@ -167,16 +244,26 @@ resultBox.style.display="none"
 
 }
 
+/* LOAD MODELS */
+
 async function loadModels(){
 
+loadingText.innerText="Loading TinyFaceDetector..."
+
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
+
+loadingText.innerText="Loading Landmark Model..."
+
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+
+loadingText.innerText="Loading Recognition Model..."
+
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+
+loadingText.innerText="Loading Database..."
 
 let res=await fetch(GAS_URL)
 database=await res.json()
-
-/* descriptor cache */
 
 database.forEach(user=>{
 
@@ -187,7 +274,18 @@ descriptor:new Float32Array(user.descriptor)
 
 })
 
+loadingText.innerText="AI Ready ✔"
+
+/* HIDE LOADING */
+
+setTimeout(()=>{
+
+loadingScreen.style.display="none"
+statusBox.innerText="AI siap - arahkan wajah"
+
 startCamera()
+
+},1000)
 
 }
 
@@ -201,6 +299,8 @@ detectLoop()
 
 }
 
+/* DETECTOR */
+
 const detectorOptions=
 new faceapi.TinyFaceDetectorOptions({
 inputSize:128,
@@ -211,7 +311,7 @@ async function detectLoop(){
 
 frameCount++
 
-/* SKIP FRAME AI */
+/* SKIP FRAME */
 
 if(frameCount % 3 !==0){
 
@@ -236,8 +336,6 @@ statusBox.innerText="Wajah terdeteksi"
 
 const box=detection.detection.box
 
-/* TRACKING BOUNDING BOX */
-
 if(lastBox){
 
 box.x=(box.x+lastBox.x)/2
@@ -247,14 +345,10 @@ box.y=(box.y+lastBox.y)/2
 
 lastBox=box
 
-const vw=video.clientWidth
-const vh=video.clientHeight
-
 faceFrame.style.width=box.width+"px"
 faceFrame.style.height=box.height+"px"
-
-faceFrame.style.left=(box.x)+"px"
-faceFrame.style.top=(box.y)+"px"
+faceFrame.style.left=box.x+"px"
+faceFrame.style.top=box.y+"px"
 
 if(score>75){
 
@@ -275,7 +369,7 @@ requestAnimationFrame(detectLoop)
 
 }
 
-/* VECTOR DISTANCE OPTIMIZED */
+/* DISTANCE */
 
 function fastDistance(d1,d2){
 
@@ -292,6 +386,8 @@ sum+=diff*diff
 return sum
 
 }
+
+/* VERIFY */
 
 async function verifyFace(descriptor){
 
@@ -318,8 +414,6 @@ best=descriptorCache[i].nama
 }
 
 }
-
-/* threshold */
 
 if(min<0.45){
 
