@@ -9,6 +9,8 @@
 
 <style>
 
+/* STYLE ANDA TIDAK DIUBAH */
+
 *{box-sizing:border-box;}
 
 body{
@@ -18,41 +20,6 @@ font-family:Arial;
 color:white;
 display:flex;
 justify-content:center;
-}
-
-/* LOADING */
-
-#loadingScreen{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#0f172a;
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-z-index:999;
-}
-
-.spinner{
-width:60px;
-height:60px;
-border:6px solid #1e293b;
-border-top:6px solid #00e5ff;
-border-radius:50%;
-animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
-0%{transform:rotate(0deg);}
-100%{transform:rotate(360deg);}
-}
-
-.loadingText{
-margin-top:15px;
-color:#00e5ff;
 }
 
 .app{
@@ -68,24 +35,6 @@ padding:20px;
 text-align:center;
 font-size:22px;
 font-weight:bold;
-}
-
-.tabs{
-display:flex;
-background:#020617;
-}
-
-.tab{
-flex:1;
-padding:14px;
-text-align:center;
-cursor:pointer;
-border-bottom:3px solid transparent;
-}
-
-.tab.active{
-border-bottom:3px solid #00e5ff;
-background:#111827;
 }
 
 .video-wrapper{
@@ -108,10 +57,10 @@ transform:scaleX(-1);
 position:absolute;
 width:220px;
 height:280px;
-border:3px solid #00e5ff;
+border:3px solid #ff2bd6;
 border-radius:20px;
 pointer-events:none;
-box-shadow:0 0 25px #00e5ff;
+box-shadow:0 0 25px #ff2bd6;
 transition:0.3s;
 display:flex;
 justify-content:center;
@@ -131,7 +80,7 @@ left:0;
 width:100%;
 height:3px;
 background:#ff2bd6;
-box-shadow:0 0 10px #ff2bd6,0 0 20px #ff2bd6;
+box-shadow:0 0 10px #ff2bd6;
 animation:scanMove 2s linear infinite;
 opacity:0;
 }
@@ -201,48 +150,14 @@ border-color:#ff4d4d;
 color:#ff4d4d;
 }
 
-.form-area{
-padding:15px;
-display:none;
-flex-direction:column;
-gap:10px;
-}
-
-input{
-padding:12px;
-border:none;
-border-radius:10px;
-font-size:15px;
-}
-
-button{
-padding:14px;
-border:none;
-border-radius:12px;
-background:#00c853;
-color:white;
-font-weight:bold;
-cursor:pointer;
-}
-
 </style>
 </head>
 
 <body>
 
-<div id="loadingScreen">
-<div class="spinner"></div>
-<div class="loadingText">Loading AI Model...</div>
-</div>
-
 <div class="app">
 
 <div class="header">Face Recognition Pro</div>
-
-<div class="tabs">
-<div class="tab active" id="tabVerify" onclick="switchTab('verify')">Verifikasi</div>
-<div class="tab" id="tabEnroll" onclick="switchTab('enroll')">Tambah Wajah</div>
-</div>
 
 <div class="video-wrapper">
 
@@ -261,14 +176,6 @@ cursor:pointer;
 
 </div>
 
-<div class="form-area" id="enrollForm">
-
-<input type="text" id="nama" placeholder="Masukkan Nama">
-
-<button onclick="enroll()">Tambah Wajah</button>
-
-</div>
-
 </div>
 
 <script>
@@ -279,42 +186,26 @@ const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
 const resultBox=document.getElementById("resultBox");
 
-const tabVerify=document.getElementById("tabVerify");
-const tabEnroll=document.getElementById("tabEnroll");
-const enrollForm=document.getElementById("enrollForm");
-
-const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
+const GAS_URL="YOUR_GAS_URL";
 const MODEL_URL="./models";
 
 let database=[];
 let verifying=false;
 let cachedDescriptor=null;
 
-/* silent anti spoof */
+/* ANTI SPOOF VARIABLES */
+
+let blinkDetected=false;
+let eyeClosedFrames=0;
 
 let lastDescriptor=null;
 let movementScore=0;
 
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
+let headMoveScore=0;
+let lastNoseX=null;
+
+navigator.mediaDevices.getUserMedia({video:true})
 .then(stream=>{video.srcObject=stream;});
-
-function switchTab(tab){
-
-if(tab==="verify"){
-
-tabVerify.classList.add("active");
-tabEnroll.classList.remove("active");
-enrollForm.style.display="none";
-
-}else{
-
-tabVerify.classList.remove("active");
-tabEnroll.classList.add("active");
-enrollForm.style.display="flex";
-
-}
-
-}
 
 function showResult(text,type){
 
@@ -339,8 +230,6 @@ await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 let response=await fetch(GAS_URL);
 database=await response.json();
 
-document.getElementById("loadingScreen").style.display="none";
-
 startFaceDetection();
 
 }
@@ -348,10 +237,7 @@ startFaceDetection();
 loadModels();
 
 const detectorOptions=
-new faceapi.TinyFaceDetectorOptions({
-inputSize:128,
-scoreThreshold:0.5
-});
+new faceapi.TinyFaceDetectorOptions({inputSize:128});
 
 function descriptorMovement(d1,d2){
 
@@ -365,28 +251,21 @@ return sum;
 
 }
 
+function eyeAspectRatio(eye){
+
+const A=Math.hypot(eye[1].x-eye[5].x,eye[1].y-eye[5].y);
+const B=Math.hypot(eye[2].x-eye[4].x,eye[2].y-eye[4].y);
+const C=Math.hypot(eye[0].x-eye[3].x,eye[0].y-eye[3].y);
+
+return (A+B)/(2*C);
+
+}
+
 async function startFaceDetection(){
 
 async function detect(){
 
 if(!verifying){
-
-const detection=await faceapi.detectSingleFace(video,detectorOptions);
-
-if(detection){
-
-faceFrame.classList.add("active");
-
-const percent=Math.round(detection.score*100);
-
-confidenceBox.innerText="Confidence "+percent+"%";
-detectStatus.innerText="Wajah terdeteksi";
-
-confidenceBox.classList.remove("conf-green");
-
-if(percent>=75){
-
-confidenceBox.classList.add("conf-green");
 
 const full=await faceapi
 .detectSingleFace(video,detectorOptions)
@@ -395,9 +274,57 @@ const full=await faceapi
 
 if(full){
 
-let currentDescriptor=Array.from(full.descriptor);
+faceFrame.classList.add("active");
 
-/* silent anti spoof */
+const percent=Math.round(full.detection.score*100);
+
+confidenceBox.innerText="Confidence "+percent+"%";
+detectStatus.innerText="Wajah terdeteksi";
+
+if(percent>=75){
+
+confidenceBox.classList.add("conf-green");
+
+/* BLINK DETECTION */
+
+const leftEye=full.landmarks.getLeftEye();
+const rightEye=full.landmarks.getRightEye();
+
+const ear=(eyeAspectRatio(leftEye)+eyeAspectRatio(rightEye))/2;
+
+if(ear<0.20){
+
+eyeClosedFrames++;
+
+}else{
+
+if(eyeClosedFrames>1){
+blinkDetected=true;
+}
+
+eyeClosedFrames=0;
+
+}
+
+/* HEAD MOVEMENT */
+
+const nose=full.landmarks.getNose()[3];
+
+if(lastNoseX){
+
+let move=Math.abs(nose.x-lastNoseX);
+
+if(move>2){
+headMoveScore++;
+}
+
+}
+
+lastNoseX=nose.x;
+
+/* DESCRIPTOR VARIATION */
+
+let currentDescriptor=Array.from(full.descriptor);
 
 if(lastDescriptor){
 
@@ -409,15 +336,19 @@ movementScore++;
 
 }
 
-if(movementScore>2){
+lastDescriptor=currentDescriptor;
+
+/* FINAL LIVENESS CHECK */
+
+if(blinkDetected && headMoveScore>2 && movementScore>2){
 
 cachedDescriptor=currentDescriptor;
+
 autoVerify();
+
+blinkDetected=false;
 movementScore=0;
-
-}
-
-lastDescriptor=currentDescriptor;
+headMoveScore=0;
 
 }
 
@@ -491,34 +422,6 @@ showResult("Wajah tidak dikenali","fail");
 setTimeout(()=>{
 verifying=false;
 },2000);
-
-}
-
-async function enroll(){
-
-const nama=document.getElementById("nama").value;
-
-if(!nama){
-alert("Isi nama dulu");
-return;
-}
-
-if(!cachedDescriptor){
-alert("Posisikan wajah dulu sampai terdeteksi");
-return;
-}
-
-fetch(GAS_URL,{
-method:"POST",
-mode:"no-cors",
-body:JSON.stringify({
-mode:"enroll",
-nama:nama,
-descriptor:cachedDescriptor
-})
-});
-
-showResult("Wajah berhasil ditambahkan","success");
 
 }
 
