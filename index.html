@@ -20,8 +20,6 @@ display:flex;
 justify-content:center;
 }
 
-/* LOADING */
-
 #loadingScreen{
 position:fixed;
 top:0;
@@ -55,8 +53,6 @@ margin-top:15px;
 color:#00e5ff;
 }
 
-/* APP */
-
 .app{
 width:100%;
 max-width:500px;
@@ -71,8 +67,6 @@ text-align:center;
 font-size:22px;
 font-weight:bold;
 }
-
-/* TAB */
 
 .tabs{
 display:flex;
@@ -92,8 +86,6 @@ border-bottom:3px solid #00e5ff;
 background:#111827;
 }
 
-/* VIDEO */
-
 .video-wrapper{
 position:relative;
 flex:1;
@@ -109,8 +101,6 @@ border-radius:20px;
 background:black;
 transform:scaleX(-1);
 }
-
-/* FRAME */
 
 .face-frame{
 position:absolute;
@@ -128,8 +118,6 @@ overflow:hidden;
 border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
-
-/* SCAN LINE */
 
 .scan-line{
 position:absolute;
@@ -151,8 +139,6 @@ opacity:1;
 0%{top:0;}
 100%{top:100%;}
 }
-
-/* INFO */
 
 .frame-info{
 position:absolute;
@@ -184,8 +170,6 @@ font-size:13px;
 color:#cbd5f5;
 }
 
-/* RESULT */
-
 .result-box{
 position:absolute;
 top:10px;
@@ -210,8 +194,6 @@ color:#00ff7b;
 border-color:#ff4d4d;
 color:#ff4d4d;
 }
-
-/* FORM */
 
 .form-area{
 padding:15px;
@@ -274,11 +256,8 @@ cursor:pointer;
 </div>
 
 <div class="form-area" id="enrollForm">
-
 <input type="text" id="nama" placeholder="Masukkan Nama">
-
 <button onclick="enroll()">Tambah Wajah</button>
-
 </div>
 
 </div>
@@ -302,11 +281,10 @@ let database=[];
 let verifying=false;
 let cachedDescriptor=null;
 
-/* ANTI SPOOF */
+/* silent anti spoof */
 
 let blinkDetected=false;
 let eyeClosed=false;
-
 let headMoveDetected=false;
 let lastNoseX=null;
 let lastNoseY=null;
@@ -369,10 +347,13 @@ const rightEye=landmarks.getRightEye();
 function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 
 function EAR(eye){
+
 const A=dist(eye[1],eye[5]);
 const B=dist(eye[2],eye[4]);
 const C=dist(eye[0],eye[3]);
+
 return (A+B)/(2*C);
+
 }
 
 const ear=(EAR(leftEye)+EAR(rightEye))/2;
@@ -439,21 +420,14 @@ if(full){
 detectBlink(full.landmarks);
 detectHeadMove(full.landmarks);
 
-if(!blinkDetected){
-detectStatus.innerText="Silakan kedipkan mata";
-requestAnimationFrame(detect);
-return;
-}
+/* silent liveness */
 
-if(!headMoveDetected){
-detectStatus.innerText="Gerakkan kepala sedikit";
-requestAnimationFrame(detect);
-return;
-}
+if(blinkDetected && headMoveDetected){
 
 cachedDescriptor=Array.from(full.descriptor);
-
 autoVerify();
+
+}
 
 }
 
@@ -556,5 +530,6 @@ showResult("Wajah berhasil ditambahkan","success");
 }
 
 </script>
+
 </body>
 </html>
