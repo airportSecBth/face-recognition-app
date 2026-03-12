@@ -20,6 +20,53 @@ display:flex;
 justify-content:center;
 }
 
+/* LOADING SCREEN */
+
+#loadingScreen{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#0f172a;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+z-index:999;
+}
+
+.loader-frame{
+width:200px;
+height:260px;
+border:3px solid #00e5ff;
+border-radius:20px;
+position:relative;
+overflow:hidden;
+box-shadow:0 0 25px #00e5ff;
+}
+
+.loader-line{
+position:absolute;
+width:100%;
+height:3px;
+background:#00ff7b;
+animation:scanAnim 2s linear infinite;
+}
+
+@keyframes scanAnim{
+0%{top:0}
+100%{top:100%}
+}
+
+.loading-text{
+margin-top:20px;
+font-size:16px;
+color:#00e5ff;
+}
+
+/* APP */
+
 .app{
 width:100%;
 max-width:500px;
@@ -60,6 +107,7 @@ border-radius:20px;
 pointer-events:none;
 box-shadow:0 0 25px #00e5ff;
 transition:0.3s;
+overflow:hidden;
 display:flex;
 justify-content:center;
 align-items:flex-end;
@@ -69,6 +117,23 @@ align-items:flex-end;
 border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
+
+/* SCAN LINE */
+
+.scan-line{
+position:absolute;
+width:100%;
+height:3px;
+background:#00ff7b;
+animation:scanAnim 2s linear infinite;
+opacity:0;
+}
+
+.face-frame.active .scan-line{
+opacity:1;
+}
+
+/* INFO */
 
 .frame-info{
 position:absolute;
@@ -129,6 +194,21 @@ color:#ff4d4d;
 
 <body>
 
+<!-- LOADING -->
+
+<div id="loadingScreen">
+
+<div class="loader-frame">
+<div class="loader-line"></div>
+</div>
+
+<div class="loading-text">
+Loading AI Model...
+</div>
+
+</div>
+
+
 <div class="app">
 
 <div class="header">Face Recognition Pro</div>
@@ -141,6 +221,8 @@ color:#ff4d4d;
 
 <div class="face-frame" id="faceFrame">
 
+<div class="scan-line"></div>
+
 <div class="frame-info">
 <div id="confidenceBox">Confidence 0%</div>
 <div id="detectStatus">Tidak ada wajah</div>
@@ -149,7 +231,6 @@ color:#ff4d4d;
 </div>
 
 </div>
-
 </div>
 
 <script>
@@ -159,6 +240,7 @@ const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
 const resultBox=document.getElementById("resultBox");
+const loadingScreen=document.getElementById("loadingScreen");
 
 const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL="./models";
@@ -166,9 +248,6 @@ const MODEL_URL="./models";
 let database=[];
 let verifying=false;
 let cachedDescriptor=null;
-
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{video.srcObject=stream;});
 
 function showResult(text,type){
 
@@ -193,7 +272,17 @@ await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 let response=await fetch(GAS_URL);
 database=await response.json();
 
+/* LOADING SELESAI */
+
+loadingScreen.style.display="none";
+
+/* AKTIFKAN KAMERA */
+
+navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
+.then(stream=>{
+video.srcObject=stream;
 startFaceDetection();
+});
 
 }
 
@@ -227,8 +316,6 @@ confidenceBox.classList.remove("conf-green");
 if(percent>=75){
 
 confidenceBox.classList.add("conf-green");
-
-/* SIMPAN DESCRIPTOR KE CACHE */
 
 const full=await faceapi
 .detectSingleFace(video,detectorOptions)
