@@ -164,10 +164,6 @@ font-weight:bold;
 color:#00e5ff;
 }
 
-.conf-green{
-color:#00ff7b;
-}
-
 #detectStatus{
 font-size:13px;
 color:#cbd5f5;
@@ -238,8 +234,8 @@ cursor:pointer;
 <div class="header">Face Recognition Pro</div>
 
 <div class="tabs">
-<div class="tab active" id="tabVerify" onclick="switchTab('verify')">Verifikasi</div>
-<div class="tab" id="tabEnroll" onclick="switchTab('enroll')">Tambah Wajah</div>
+<div class="tab active">Verifikasi</div>
+<div class="tab">Tambah Wajah</div>
 </div>
 
 <div class="video-wrapper">
@@ -259,14 +255,6 @@ cursor:pointer;
 
 </div>
 
-<div class="form-area" id="enrollForm">
-
-<input type="text" id="nama" placeholder="Masukkan Nama">
-
-<button onclick="enroll()">Tambah Wajah</button>
-
-</div>
-
 </div>
 
 <script>
@@ -277,21 +265,20 @@ const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
 const resultBox=document.getElementById("resultBox");
 
-const tabVerify=document.getElementById("tabVerify");
-const tabEnroll=document.getElementById("tabEnroll");
-const enrollForm=document.getElementById("enrollForm");
-
-const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
+const GAS_URL="YOUR_GAS_URL";
 const MODEL_URL="./models";
 
 let database=[];
 let verifying=false;
 let cachedDescriptor=null;
 
-/* BLINK STATE */
+/* BLINK SETTINGS (HP FRIENDLY) */
 
+const BLINK_CLOSE=0.26;
+let eyeClosedFrames=0;
 let blinkDetected=false;
-let blinkReady=true;
+
+/* EAR FUNCTION */
 
 function eyeAspectRatio(eye){
 
@@ -303,17 +290,19 @@ return (A+B)/(2*C);
 
 }
 
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{video.srcObject=stream;});
+/* CAMERA */
+
+navigator.mediaDevices.getUserMedia({
+video:{facingMode:"user"}
+}).then(stream=>{video.srcObject=stream});
+
+/* LOAD MODEL */
 
 async function loadModels(){
 
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-
-let response=await fetch(GAS_URL);
-database=await response.json();
 
 document.getElementById("loadingScreen").style.display="none";
 
@@ -323,13 +312,18 @@ startDetection();
 
 loadModels();
 
-const detectorOptions=new faceapi.TinyFaceDetectorOptions({inputSize:128});
+/* DETECTOR (LEBIH STABIL DI HP) */
+
+const detectorOptions=new faceapi.TinyFaceDetectorOptions({
+inputSize:160,
+scoreThreshold:0.5
+});
+
+/* DETECTION LOOP */
 
 async function startDetection(){
 
 async function detect(){
-
-if(!verifying){
 
 const full=await faceapi
 .detectSingleFace(video,detectorOptions)
@@ -343,35 +337,36 @@ faceFrame.classList.add("active");
 const percent=Math.round(full.detection.score*100);
 
 confidenceBox.innerText="Confidence "+percent+"%";
-detectStatus.innerText="Silakan kedipkan mata untuk verifikasi";
+detectStatus.innerText="Silakan kedipkan mata";
 
 const leftEye=full.landmarks.getLeftEye();
 const rightEye=full.landmarks.getRightEye();
 
 const ear=(eyeAspectRatio(leftEye)+eyeAspectRatio(rightEye))/2;
 
-/* BLINK LOGIC */
+/* BLINK DETECTION MOBILE */
 
-if(ear < 0.23 && blinkReady){
+if(ear < BLINK_CLOSE){
 
+eyeClosedFrames++;
+
+}else{
+
+if(eyeClosedFrames>=2){
 blinkDetected=true;
-blinkReady=false;
+}
+
+eyeClosedFrames=0;
 
 }
 
-if(ear > 0.27){
-
-blinkReady=true;
-
-}
-
-if(blinkDetected && percent>=75){
+if(blinkDetected && percent>=70){
 
 detectStatus.innerText="Memverifikasi wajah...";
 
 cachedDescriptor=Array.from(full.descriptor);
 
-autoVerify();
+showResult("Blink terdeteksi","success");
 
 blinkDetected=false;
 
@@ -386,8 +381,6 @@ detectStatus.innerText="Tidak ada wajah";
 
 }
 
-}
-
 requestAnimationFrame(detect);
 
 }
@@ -396,47 +389,7 @@ detect();
 
 }
 
-function euclideanDistance(d1,d2){
-
-let sum=0;
-
-for(let i=0;i<d1.length;i++){
-sum+=Math.pow(d1[i]-d2[i],2);
-}
-
-return Math.sqrt(sum);
-
-}
-
-async function autoVerify(){
-
-if(verifying || !cachedDescriptor) return;
-
-verifying=true;
-
-let bestMatch=null;
-let minDistance=999;
-
-database.forEach(user=>{
-
-const distance=euclideanDistance(cachedDescriptor,user.descriptor);
-
-if(distance<minDistance){
-minDistance=distance;
-bestMatch=user.nama;
-}
-
-});
-
-if(minDistance<0.6){
-showResult("MATCH : "+bestMatch,"success");
-}else{
-showResult("Wajah tidak dikenali","fail");
-}
-
-setTimeout(()=>{verifying=false;},2000);
-
-}
+/* RESULT BOX */
 
 function showResult(text,type){
 
@@ -448,35 +401,7 @@ resultBox.classList.remove("result-success","result-fail");
 if(type==="success") resultBox.classList.add("result-success");
 if(type==="fail") resultBox.classList.add("result-fail");
 
-setTimeout(()=>{resultBox.style.display="none";},3000);
-
-}
-
-async function enroll(){
-
-const nama=document.getElementById("nama").value;
-
-if(!nama){
-alert("Isi nama dulu");
-return;
-}
-
-if(!cachedDescriptor){
-alert("Posisikan wajah dulu sampai terdeteksi");
-return;
-}
-
-fetch(GAS_URL,{
-method:"POST",
-mode:"no-cors",
-body:JSON.stringify({
-mode:"enroll",
-nama:nama,
-descriptor:cachedDescriptor
-})
-});
-
-showResult("Wajah berhasil ditambahkan","success");
+setTimeout(()=>{resultBox.style.display="none"},3000);
 
 }
 
