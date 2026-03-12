@@ -3,256 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Face Recognition Pro</title>
+<title>Face Recognition Pro - Anti Photo</title>
 
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
-
 *{box-sizing:border-box;}
-
-body{
-margin:0;
-background:#0f172a;
-font-family:Arial;
-color:white;
-display:flex;
-justify-content:center;
-}
-
-/* LOADING */
-
-#loadingScreen{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#0f172a;
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-z-index:999;
-}
-
-.spinner{
-width:60px;
-height:60px;
-border:6px solid #1e293b;
-border-top:6px solid #00e5ff;
-border-radius:50%;
-animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
-0%{transform:rotate(0deg);}
-100%{transform:rotate(360deg);}
-}
-
-.loadingText{
-margin-top:15px;
-color:#00e5ff;
-}
-
-/* APP */
-
-.app{
-width:100%;
-max-width:500px;
-min-height:100vh;
-display:flex;
-flex-direction:column;
-}
-
-.header{
-padding:20px;
-text-align:center;
-font-size:22px;
-font-weight:bold;
-}
-
-/* TAB */
-
-.tabs{
-display:flex;
-background:#020617;
-}
-
-.tab{
-flex:1;
-padding:14px;
-text-align:center;
-cursor:pointer;
-border-bottom:3px solid transparent;
-}
-
-.tab.active{
-border-bottom:3px solid #00e5ff;
-background:#111827;
-}
-
-/* VIDEO */
-
-.video-wrapper{
-position:relative;
-flex:1;
-padding:15px;
-display:flex;
-justify-content:center;
-align-items:center;
-}
-
-video{
-width:100%;
-border-radius:20px;
-background:black;
-transform:scaleX(-1);
-}
-
-/* FRAME WAJAH */
-
-.face-frame{
-position:absolute;
-width:220px;
-height:280px;
-border:3px solid #00e5ff;
-border-radius:20px;
-pointer-events:none;
-box-shadow:0 0 25px #00e5ff;
-transition:0.3s;
-display:flex;
-justify-content:center;
-align-items:center;
-overflow:hidden;
-}
-
-.face-frame.active{
-border:3px solid #00ff7b;
-box-shadow:0 0 25px #00ff7b;
-}
-
-/* SCAN LINE */
-
-.scan-line{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:3px;
-background:#ff2bd6;
-box-shadow:0 0 10px #ff2bd6,0 0 20px #ff2bd6;
-animation:scanMove 2s linear infinite;
-opacity:0;
-}
-
-.face-frame.active .scan-line{
-opacity:1;
-}
-
-@keyframes scanMove{
-0%{top:0;}
-100%{top:100%;}
-}
-
-/* INFO BOX */
-
-.frame-info{
-position:absolute;
-top:calc(50% + 160px);
-left:50%;
-transform:translateX(-50%);
-display:flex;
-flex-direction:column;
-align-items:center;
-gap:4px;
-font-size:14px;
-background:rgba(0,0,0,0.6);
-padding:8px 14px;
-border-radius:10px;
-border:1px solid #00e5ff;
-}
-
-#confidenceBox{
-font-weight:bold;
-color:#00e5ff;
-}
-
-.conf-green{
-color:#00ff7b;
-}
-
-#detectStatus{
-font-size:13px;
-color:#cbd5f5;
-}
-
-/* RESULT */
-
-.result-box{
-position:absolute;
-top:10px;
-left:50%;
-transform:translateX(-50%);
-background:rgba(0,0,0,0.85);
-padding:10px 20px;
-border-radius:12px;
-font-weight:bold;
-font-size:16px;
-border:2px solid #00e5ff;
-z-index:10;
-display:none;
-white-space:nowrap;
-}
-
-.result-success{
-border-color:#00ff7b;
-color:#00ff7b;
-}
-
-.result-fail{
-border-color:#ff4d4d;
-color:#ff4d4d;
-}
-
-/* FORM */
-
-.form-area{
-padding:15px;
-display:none;
-flex-direction:column;
-gap:10px;
-}
-
-input{
-padding:12px;
-border:none;
-border-radius:10px;
-font-size:15px;
-}
-
-button{
-padding:14px;
-border:none;
-border-radius:12px;
-background:#00c853;
-color:white;
-font-weight:bold;
-cursor:pointer;
-}
-
+body{margin:0;background:#0f172a;font-family:Arial;color:white;display:flex;justify-content:center;}
+#loadingScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;}
+.spinner{width:60px;height:60px;border:6px solid #1e293b;border-top:6px solid #00e5ff;border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+.loadingText{margin-top:15px;color:#00e5ff;}
+.app{width:100%;max-width:500px;min-height:100vh;display:flex;flex-direction:column;}
+.header{padding:20px;text-align:center;font-size:22px;font-weight:bold;}
+.tabs{display:flex;background:#020617;}
+.tab{flex:1;padding:14px;text-align:center;cursor:pointer;border-bottom:3px solid transparent;}
+.tab.active{border-bottom:3px solid #00e5ff;background:#111827;}
+.video-wrapper{position:relative;flex:1;padding:15px;display:flex;justify-content:center;align-items:center;}
+video{width:100%;border-radius:20px;background:black;transform:scaleX(-1);}
+.face-frame{position:absolute;width:220px;height:280px;border:3px solid #00e5ff;border-radius:20px;pointer-events:none;box-shadow:0 0 25px #00e5ff;transition:0.3s;display:flex;justify-content:center;align-items:center;overflow:hidden;}
+.face-frame.active{border:3px solid #00ff7b;box-shadow:0 0 25px #00ff7b;}
+.scan-line{position:absolute;top:0;left:0;width:100%;height:3px;background:#ff2bd6;box-shadow:0 0 10px #ff2bd6,0 0 20px #ff2bd6;animation:scanMove 2s linear infinite;opacity:0;}
+.face-frame.active .scan-line{opacity:1;}
+@keyframes scanMove{0%{top:0;}100%{top:100%;}}
+.frame-info{position:absolute;top:calc(50% + 160px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;font-size:14px;background:rgba(0,0,0,0.6);padding:8px 14px;border-radius:10px;border:1px solid #00e5ff;}
+#confidenceBox{font-weight:bold;color:#00e5ff;}
+.conf-green{color:#00ff7b;}
+#detectStatus{font-size:13px;color:#cbd5f5;}
+.result-box{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);padding:10px 20px;border-radius:12px;font-weight:bold;font-size:16px;border:2px solid #00e5ff;z-index:10;display:none;white-space:nowrap;}
+.result-success{border-color:#00ff7b;color:#00ff7b;}
+.result-fail{border-color:#ff4d4d;color:#ff4d4d;}
+.form-area{padding:15px;display:none;flex-direction:column;gap:10px;}
+input{padding:12px;border:none;border-radius:10px;font-size:15px;}
+button{padding:14px;border:none;border-radius:12px;background:#00c853;color:white;font-weight:bold;cursor:pointer;}
 </style>
 </head>
 
 <body>
-
 <div id="loadingScreen">
 <div class="spinner"></div>
 <div class="loadingText">Loading AI Model...</div>
 </div>
 
 <div class="app">
-
 <div class="header">Face Recognition Pro</div>
 
 <div class="tabs">
@@ -261,40 +54,27 @@ cursor:pointer;
 </div>
 
 <div class="video-wrapper">
-
 <div id="resultBox" class="result-box"></div>
-
 <video id="video" autoplay muted playsinline></video>
-
-<div class="face-frame" id="faceFrame">
-<div class="scan-line"></div>
-</div>
-
+<div class="face-frame" id="faceFrame"><div class="scan-line"></div></div>
 <div class="frame-info">
 <div id="confidenceBox">Confidence 0%</div>
 <div id="detectStatus">Tidak ada wajah</div>
 </div>
-
 </div>
 
 <div class="form-area" id="enrollForm">
-
 <input type="text" id="nama" placeholder="Masukkan Nama">
-
 <button onclick="enroll()">Tambah Wajah</button>
-
 </div>
-
 </div>
 
 <script>
-
 const video=document.getElementById("video");
 const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
 const resultBox=document.getElementById("resultBox");
-
 const tabVerify=document.getElementById("tabVerify");
 const tabEnroll=document.getElementById("tabEnroll");
 const enrollForm=document.getElementById("enrollForm");
@@ -305,206 +85,133 @@ const MODEL_URL="./models";
 let database=[];
 let verifying=false;
 let cachedDescriptor=null;
+let lastLeftEyeBrightness=null;
+let lastRightEyeBrightness=null;
+let livenessDetected=false;
 
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{video.srcObject=stream;});
+navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}).then(stream=>{video.srcObject=stream;});
 
 function switchTab(tab){
-
-if(tab==="verify"){
-
-tabVerify.classList.add("active");
-tabEnroll.classList.remove("active");
-
-enrollForm.style.display="none";
-
-}else{
-
-tabVerify.classList.remove("active");
-tabEnroll.classList.add("active");
-
-enrollForm.style.display="flex";
-
-}
-
+if(tab==="verify"){tabVerify.classList.add("active");tabEnroll.classList.remove("active");enrollForm.style.display="none";}
+else{tabVerify.classList.remove("active");tabEnroll.classList.add("active");enrollForm.style.display="flex";}
 }
 
 function showResult(text,type){
-
 resultBox.style.display="block";
 resultBox.innerText=text;
-
 resultBox.classList.remove("result-success","result-fail");
-
 if(type==="success") resultBox.classList.add("result-success");
 if(type==="fail") resultBox.classList.add("result-fail");
-
 setTimeout(()=>{resultBox.style.display="none";},3000);
-
 }
 
 async function loadModels(){
-
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-
 let response=await fetch(GAS_URL);
 database=await response.json();
-
 document.getElementById("loadingScreen").style.display="none";
-
 startFaceDetection();
-
 }
-
 loadModels();
 
-const detectorOptions=
-new faceapi.TinyFaceDetectorOptions({
-inputSize:128,
-scoreThreshold:0.5
-});
+const detectorOptions=new faceapi.TinyFaceDetectorOptions({inputSize:128,scoreThreshold:0.5});
+
+function getEyeBrightness(video,eyeLandmarks){
+    const minX=Math.min(...eyeLandmarks.map(p=>p.x));
+    const maxX=Math.max(...eyeLandmarks.map(p=>p.x));
+    const minY=Math.min(...eyeLandmarks.map(p=>p.y));
+    const maxY=Math.max(...eyeLandmarks.map(p=>p.y));
+    const width=maxX-minX;
+    const height=maxY-minY;
+    const canvas=document.createElement("canvas");
+    canvas.width=width; canvas.height=height;
+    const ctx=canvas.getContext("2d");
+    ctx.drawImage(video,minX,minY,width,height,0,0,width,height);
+    const data=ctx.getImageData(0,0,width,height).data;
+    let sum=0;
+    for(let i=0;i<data.length;i+=4) sum+=(data[i]+data[i+1]+data[i+2])/3;
+    return sum/(data.length/4);
+}
+
+async function checkEyeLiveness(full){
+    const leftEye=full.landmarks.getLeftEye();
+    const rightEye=full.landmarks.getRightEye();
+    const leftBrightness=getEyeBrightness(video,leftEye);
+    const rightBrightness=getEyeBrightness(video,rightEye);
+    if(lastLeftEyeBrightness!==null && lastRightEyeBrightness!==null){
+        const deltaLeft=Math.abs(leftBrightness-lastLeftEyeBrightness);
+        const deltaRight=Math.abs(rightBrightness-lastRightEyeBrightness);
+        if(deltaLeft>5 || deltaRight>5) livenessDetected=true; // threshold bisa disesuaikan
+    }
+    lastLeftEyeBrightness=leftBrightness;
+    lastRightEyeBrightness=rightBrightness;
+}
 
 async function startFaceDetection(){
-
-async function detect(){
-
-if(!verifying){
-
-const detection=await faceapi.detectSingleFace(video,detectorOptions);
-
-if(detection){
-
-faceFrame.classList.add("active");
-
-const percent=Math.round(detection.score*100);
-
-confidenceBox.innerText="Confidence "+percent+"%";
-detectStatus.innerText="Wajah terdeteksi";
-
-confidenceBox.classList.remove("conf-green");
-
-if(percent>=75){
-
-confidenceBox.classList.add("conf-green");
-
-const full=await faceapi
-.detectSingleFace(video,detectorOptions)
-.withFaceLandmarks()
-.withFaceDescriptor();
-
-if(full){
-
-cachedDescriptor=Array.from(full.descriptor);
-autoVerify();
-
-}
-
-}
-
-}else{
-
-faceFrame.classList.remove("active");
-
-confidenceBox.innerText="Confidence 0%";
-detectStatus.innerText="Tidak ada wajah";
-
-confidenceBox.classList.remove("conf-green");
-
-}
-
-}
-
-requestAnimationFrame(detect);
-
-}
-
-detect();
-
+    async function detect(){
+        if(!verifying){
+            const detection=await faceapi.detectSingleFace(video,detectorOptions);
+            if(detection){
+                faceFrame.classList.add("active");
+                const percent=Math.round(detection.score*100);
+                confidenceBox.innerText="Confidence "+percent+"%";
+                detectStatus.innerText="Wajah terdeteksi";
+                confidenceBox.classList.remove("conf-green");
+                if(percent>=75){
+                    confidenceBox.classList.add("conf-green");
+                    const full=await faceapi.detectSingleFace(video,detectorOptions).withFaceLandmarks().withFaceDescriptor();
+                    if(full){
+                        cachedDescriptor=Array.from(full.descriptor);
+                        await checkEyeLiveness(full);
+                        if(livenessDetected) autoVerify();
+                        else showResult("Wajah tidak live (kemungkinan foto)", "fail");
+                    }
+                }
+            } else {
+                faceFrame.classList.remove("active");
+                confidenceBox.innerText="Confidence 0%";
+                detectStatus.innerText="Tidak ada wajah";
+                confidenceBox.classList.remove("conf-green");
+                livenessDetected=false;
+            }
+        }
+        requestAnimationFrame(detect);
+    }
+    detect();
 }
 
 function euclideanDistance(d1,d2){
-
-let sum=0;
-
-for(let i=0;i<d1.length;i++){
-sum+=Math.pow(d1[i]-d2[i],2);
-}
-
-return Math.sqrt(sum);
-
+    let sum=0;
+    for(let i=0;i<d1.length;i++) sum+=Math.pow(d1[i]-d2[i],2);
+    return Math.sqrt(sum);
 }
 
 async function autoVerify(){
-
-if(verifying || !cachedDescriptor) return;
-
-verifying=true;
-
-detectStatus.innerText="Memverifikasi...";
-
-let bestMatch=null;
-let minDistance=999;
-
-database.forEach(user=>{
-
-const distance=euclideanDistance(cachedDescriptor,user.descriptor);
-
-if(distance<minDistance){
-minDistance=distance;
-bestMatch=user.nama;
-}
-
-});
-
-if(minDistance<0.6){
-
-showResult("MATCH : "+bestMatch,"success");
-
-}else{
-
-showResult("Wajah tidak dikenali","fail");
-
-}
-
-setTimeout(()=>{
-verifying=false;
-},2000);
-
+    if(verifying || !cachedDescriptor) return;
+    verifying=true;
+    detectStatus.innerText="Memverifikasi...";
+    let bestMatch=null;
+    let minDistance=999;
+    database.forEach(user=>{
+        const distance=euclideanDistance(cachedDescriptor,user.descriptor);
+        if(distance<minDistance){minDistance=distance;bestMatch=user.nama;}
+    });
+    if(minDistance<0.6){
+        showResult("MATCH : "+bestMatch,"success");
+    } else showResult("Wajah tidak dikenali","fail");
+    setTimeout(()=>{verifying=false;},2000);
 }
 
 /* TAMBAH WAJAH */
-
 async function enroll(){
-
-const nama=document.getElementById("nama").value;
-
-if(!nama){
-alert("Isi nama dulu");
-return;
+    const nama=document.getElementById("nama").value;
+    if(!nama){alert("Isi nama dulu");return;}
+    if(!cachedDescriptor){alert("Posisikan wajah dulu sampai terdeteksi");return;}
+    fetch(GAS_URL,{method:"POST",mode:"no-cors",body:JSON.stringify({mode:"enroll",nama:nama,descriptor:cachedDescriptor})});
+    showResult("Wajah berhasil ditambahkan","success");
 }
-
-if(!cachedDescriptor){
-alert("Posisikan wajah dulu sampai terdeteksi");
-return;
-}
-
-fetch(GAS_URL,{
-method:"POST",
-mode:"no-cors",
-body:JSON.stringify({
-mode:"enroll",
-nama:nama,
-descriptor:cachedDescriptor
-})
-});
-
-showResult("Wajah berhasil ditambahkan","success");
-
-}
-
 </script>
-
 </body>
 </html>
