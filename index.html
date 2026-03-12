@@ -411,7 +411,8 @@ confidenceBox.innerText="Confidence 0%";
 detectStatus.innerText="Tidak ada wajah";
 
 confidenceBox.classList.remove("conf-green");
-
+// RESET cached descriptor ketika wajah hilang
+cachedDescriptor = null;
 }
 
 }
