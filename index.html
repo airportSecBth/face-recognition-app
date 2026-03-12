@@ -77,9 +77,8 @@ position:relative;
 flex:1;
 padding:15px;
 display:flex;
-flex-direction:column;
-align-items:center;
 justify-content:center;
+align-items:center;
 }
 
 /* VIDEO */
@@ -113,7 +112,7 @@ border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
 
-/* SCAN LINE */
+/* SCAN LINE PINK */
 
 .scan-line{
 position:absolute;
@@ -121,7 +120,8 @@ top:0;
 left:0;
 width:100%;
 height:3px;
-background:#00ff7b;
+background:#ff2bd6;
+box-shadow:0 0 10px #ff2bd6,0 0 20px #ff2bd6;
 animation:scanMove 2s linear infinite;
 opacity:0;
 }
@@ -135,10 +135,13 @@ opacity:1;
 100%{top:100%;}
 }
 
-/* INFO BOX DI LUAR FRAME */
+/* INFO BOX DI DALAM VIDEO TAPI DI LUAR FRAME */
 
 .frame-info{
-margin-top:15px;
+position:absolute;
+top:calc(50% + 160px);
+left:50%;
+transform:translateX(-50%);
 display:flex;
 flex-direction:column;
 align-items:center;
@@ -212,13 +215,9 @@ color:#ff4d4d;
 
 <video id="video" autoplay muted playsinline></video>
 
-<!-- FRAME WAJAH -->
-
 <div class="face-frame" id="faceFrame">
 <div class="scan-line"></div>
 </div>
-
-<!-- INFO DI LUAR FRAME -->
 
 <div class="frame-info">
 <div id="confidenceBox">Confidence 0%</div>
