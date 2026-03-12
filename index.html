@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Face Recognition Pro</title>
 
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0"></script>
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
@@ -264,7 +265,6 @@ cursor:pointer;
 <div class="form-area" id="enrollForm">
 
 <input type="text" id="nama" placeholder="Masukkan Nama">
-
 <button onclick="enroll()">Tambah Wajah</button>
 
 </div>
@@ -290,7 +290,13 @@ let database=[];
 let verifying=false;
 let cachedDescriptor=null;
 
-/* ANTI FOTO */
+/* LIVENESS MODEL */
+
+let livenessModel;
+let lastLivenessCheck=0;
+let livenessPassed=false;
+
+/* BLINK */
 
 let blinkDetected=false;
 let eyeClosedFrames=0;
@@ -337,11 +343,21 @@ setTimeout(()=>{resultBox.style.display="none";},3000);
 
 }
 
+/* LOAD LIVENESS MODEL */
+
+async function loadLivenessModel(){
+livenessModel = await tf.loadGraphModel("./liveness/model.json");
+}
+
+/* LOAD ALL MODELS */
+
 async function loadModels(){
 
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+await loadLivenessModel();
 
 let response=await fetch(GAS_URL);
 database=await response.json();
@@ -353,6 +369,39 @@ startFaceDetection();
 }
 
 loadModels();
+
+/* LIVENESS CHECK */
+
+async function checkLiveness(){
+
+if(Date.now()-lastLivenessCheck<800){
+return livenessPassed;
+}
+
+lastLivenessCheck=Date.now();
+
+const canvas=document.createElement("canvas");
+canvas.width=128;
+canvas.height=128;
+
+const ctx=canvas.getContext("2d");
+ctx.drawImage(video,0,0,128,128);
+
+const img=tf.browser.fromPixels(canvas)
+.resizeBilinear([128,128])
+.toFloat()
+.div(255)
+.expandDims(0);
+
+const prediction=await livenessModel.predict(img).data();
+
+const score=prediction[0];
+
+livenessPassed = score>0.6;
+
+return livenessPassed;
+
+}
 
 const detectorOptions=new faceapi.TinyFaceDetectorOptions({
 inputSize:128,
@@ -402,7 +451,9 @@ eyeClosedFrames=0;
 
 }
 
-if(blinkDetected || livenessFrames>20){
+const live=await checkLiveness();
+
+if((blinkDetected||livenessFrames>20) && live){
 
 cachedDescriptor=Array.from(full.descriptor);
 
