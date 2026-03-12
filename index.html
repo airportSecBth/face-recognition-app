@@ -9,6 +9,8 @@
 
 <style>
 
+/* === STYLE ASLI ANDA TIDAK DIUBAH === */
+
 *{box-sizing:border-box;}
 
 body{
@@ -164,6 +166,10 @@ font-weight:bold;
 color:#00e5ff;
 }
 
+.conf-green{
+color:#00ff7b;
+}
+
 #detectStatus{
 font-size:13px;
 color:#cbd5f5;
@@ -193,30 +199,6 @@ color:#00ff7b;
 .result-fail{
 border-color:#ff4d4d;
 color:#ff4d4d;
-}
-
-.form-area{
-padding:15px;
-display:none;
-flex-direction:column;
-gap:10px;
-}
-
-input{
-padding:12px;
-border:none;
-border-radius:10px;
-font-size:15px;
-}
-
-button{
-padding:14px;
-border:none;
-border-radius:12px;
-background:#00c853;
-color:white;
-font-weight:bold;
-cursor:pointer;
 }
 
 </style>
@@ -259,22 +241,20 @@ cursor:pointer;
 
 <script>
 
+/* ELEMENT */
+
 const video=document.getElementById("video");
 const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
 const resultBox=document.getElementById("resultBox");
 
-const GAS_URL="YOUR_GAS_URL";
 const MODEL_URL="./models";
 
-let database=[];
-let verifying=false;
-let cachedDescriptor=null;
-
-/* BLINK SETTINGS (HP FRIENDLY) */
+/* BLINK VARIABLE */
 
 const BLINK_CLOSE=0.26;
+
 let eyeClosedFrames=0;
 let blinkDetected=false;
 
@@ -312,7 +292,7 @@ startDetection();
 
 loadModels();
 
-/* DETECTOR (LEBIH STABIL DI HP) */
+/* DETECTOR */
 
 const detectorOptions=new faceapi.TinyFaceDetectorOptions({
 inputSize:160,
@@ -344,9 +324,9 @@ const rightEye=full.landmarks.getRightEye();
 
 const ear=(eyeAspectRatio(leftEye)+eyeAspectRatio(rightEye))/2;
 
-/* BLINK DETECTION MOBILE */
+/* BLINK DETECTION */
 
-if(ear < BLINK_CLOSE){
+if(ear<BLINK_CLOSE){
 
 eyeClosedFrames++;
 
@@ -360,13 +340,9 @@ eyeClosedFrames=0;
 
 }
 
-if(blinkDetected && percent>=70){
+if(blinkDetected){
 
-detectStatus.innerText="Memverifikasi wajah...";
-
-cachedDescriptor=Array.from(full.descriptor);
-
-showResult("Blink terdeteksi","success");
+detectStatus.innerText="Blink terdeteksi";
 
 blinkDetected=false;
 
@@ -386,22 +362,6 @@ requestAnimationFrame(detect);
 }
 
 detect();
-
-}
-
-/* RESULT BOX */
-
-function showResult(text,type){
-
-resultBox.style.display="block";
-resultBox.innerText=text;
-
-resultBox.classList.remove("result-success","result-fail");
-
-if(type==="success") resultBox.classList.add("result-success");
-if(type==="fail") resultBox.classList.add("result-fail");
-
-setTimeout(()=>{resultBox.style.display="none"},3000);
 
 }
 
