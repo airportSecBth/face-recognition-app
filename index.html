@@ -9,10 +9,6 @@
 
 <style>
 
-/* ===================== */
-/* STYLE ANDA TIDAK DIUBAH */
-/* ===================== */
-
 *{box-sizing:border-box;}
 
 body{
@@ -59,6 +55,8 @@ margin-top:15px;
 color:#00e5ff;
 }
 
+/* APP */
+
 .app{
 width:100%;
 max-width:500px;
@@ -73,6 +71,8 @@ text-align:center;
 font-size:22px;
 font-weight:bold;
 }
+
+/* TAB */
 
 .tabs{
 display:flex;
@@ -92,6 +92,8 @@ border-bottom:3px solid #00e5ff;
 background:#111827;
 }
 
+/* VIDEO */
+
 .video-wrapper{
 position:relative;
 flex:1;
@@ -107,6 +109,8 @@ border-radius:20px;
 background:black;
 transform:scaleX(-1);
 }
+
+/* FRAME WAJAH */
 
 .face-frame{
 position:absolute;
@@ -128,6 +132,8 @@ border:3px solid #00ff7b;
 box-shadow:0 0 25px #00ff7b;
 }
 
+/* SCAN LINE */
+
 .scan-line{
 position:absolute;
 top:0;
@@ -148,6 +154,8 @@ opacity:1;
 0%{top:0;}
 100%{top:100%;}
 }
+
+/* INFO BOX */
 
 .frame-info{
 position:absolute;
@@ -179,6 +187,8 @@ font-size:13px;
 color:#cbd5f5;
 }
 
+/* RESULT */
+
 .result-box{
 position:absolute;
 top:10px;
@@ -204,6 +214,8 @@ color:#00ff7b;
 border-color:#ff4d4d;
 color:#ff4d4d;
 }
+
+/* FORM */
 
 .form-area{
 padding:15px;
@@ -277,67 +289,82 @@ cursor:pointer;
 
 <script>
 
-/* ======================== */
-/* BLINK DETECTION (ANTI SPOOF) */
-/* ======================== */
+const video=document.getElementById("video");
+const faceFrame=document.getElementById("faceFrame");
+const confidenceBox=document.getElementById("confidenceBox");
+const detectStatus=document.getElementById("detectStatus");
+const resultBox=document.getElementById("resultBox");
 
-let blinkState="open"
+const tabVerify=document.getElementById("tabVerify");
+const tabEnroll=document.getElementById("tabEnroll");
+const enrollForm=document.getElementById("enrollForm");
 
-function eyeAspectRatio(eye){
+const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
+const MODEL_URL="./models";
 
-const A=Math.hypot(eye[1].x-eye[5].x,eye[1].y-eye[5].y)
-const B=Math.hypot(eye[2].x-eye[4].x,eye[2].y-eye[4].y)
-const C=Math.hypot(eye[0].x-eye[3].x,eye[0].y-eye[3].y)
+let database=[];
+let verifying=false;
+let cachedDescriptor=null;
 
-return (A+B)/(2*C)
+navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
+.then(stream=>{video.srcObject=stream;});
+
+function switchTab(tab){
+
+if(tab==="verify"){
+
+tabVerify.classList.add("active");
+tabEnroll.classList.remove("active");
+
+enrollForm.style.display="none";
+
+}else{
+
+tabVerify.classList.remove("active");
+tabEnroll.classList.add("active");
+
+enrollForm.style.display="flex";
 
 }
 
-/* ======================== */
-/* ORIGINAL SCRIPT */
-/* ======================== */
+}
 
-const video=document.getElementById("video")
-const faceFrame=document.getElementById("faceFrame")
-const confidenceBox=document.getElementById("confidenceBox")
-const detectStatus=document.getElementById("detectStatus")
-const resultBox=document.getElementById("resultBox")
+function showResult(text,type){
 
-const tabVerify=document.getElementById("tabVerify")
-const tabEnroll=document.getElementById("tabEnroll")
-const enrollForm=document.getElementById("enrollForm")
+resultBox.style.display="block";
+resultBox.innerText=text;
 
-const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec"
-const MODEL_URL="./models"
+resultBox.classList.remove("result-success","result-fail");
 
-let database=[]
-let verifying=false
-let cachedDescriptor=null
+if(type==="success") resultBox.classList.add("result-success");
+if(type==="fail") resultBox.classList.add("result-fail");
 
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{video.srcObject=stream})
+setTimeout(()=>{resultBox.style.display="none";},3000);
+
+}
 
 async function loadModels(){
 
-await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
-await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
-await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 
-let response=await fetch(GAS_URL)
-database=await response.json()
+let response=await fetch(GAS_URL);
+database=await response.json();
 
-document.getElementById("loadingScreen").style.display="none"
+document.getElementById("loadingScreen").style.display="none";
 
-startFaceDetection()
+startFaceDetection();
 
 }
 
-loadModels()
+loadModels();
 
-const detectorOptions=new faceapi.TinyFaceDetectorOptions({
-inputSize:160,
+const detectorOptions=
+new faceapi.TinyFaceDetectorOptions({
+inputSize:128,
 scoreThreshold:0.5
-})
+});
 
 async function startFaceDetection(){
 
@@ -345,40 +372,32 @@ async function detect(){
 
 if(!verifying){
 
-const full=await faceapi
-.detectSingleFace(video,detectorOptions)
-.withFaceLandmarks()
-.withFaceDescriptor()
+const detection=await faceapi.detectSingleFace(video,detectorOptions);
 
-if(full){
+if(detection){
 
-faceFrame.classList.add("active")
+faceFrame.classList.add("active");
 
-const percent=Math.round(full.detection.score*100)
+const percent=Math.round(detection.score*100);
 
-confidenceBox.innerText="Confidence "+percent+"%"
-detectStatus.innerText="Wajah terdeteksi"
+confidenceBox.innerText="Confidence "+percent+"%";
+detectStatus.innerText="Wajah terdeteksi";
+
+confidenceBox.classList.remove("conf-green");
 
 if(percent>=75){
 
-/* BLINK DETECTION */
+confidenceBox.classList.add("conf-green");
 
-const leftEye=full.landmarks.getLeftEye()
-const rightEye=full.landmarks.getRightEye()
+const full=await faceapi
+.detectSingleFace(video,detectorOptions)
+.withFaceLandmarks()
+.withFaceDescriptor();
 
-const ear=(eyeAspectRatio(leftEye)+eyeAspectRatio(rightEye))/2
+if(full){
 
-if(blinkState==="open" && ear<0.22){
-blinkState="closed"
-}
-
-if(blinkState==="closed" && ear>0.26){
-
-blinkState="open"
-
-cachedDescriptor=Array.from(full.descriptor)
-
-autoVerify()
+cachedDescriptor=Array.from(full.descriptor);
+autoVerify();
 
 }
 
@@ -386,77 +405,102 @@ autoVerify()
 
 }else{
 
-faceFrame.classList.remove("active")
-confidenceBox.innerText="Confidence 0%"
-detectStatus.innerText="Tidak ada wajah"
+faceFrame.classList.remove("active");
+
+confidenceBox.innerText="Confidence 0%";
+detectStatus.innerText="Tidak ada wajah";
+
+confidenceBox.classList.remove("conf-green");
 
 }
 
 }
 
-requestAnimationFrame(detect)
+requestAnimationFrame(detect);
 
 }
 
-detect()
+detect();
 
 }
 
 function euclideanDistance(d1,d2){
 
-let sum=0
+let sum=0;
 
 for(let i=0;i<d1.length;i++){
-sum+=Math.pow(d1[i]-d2[i],2)
+sum+=Math.pow(d1[i]-d2[i],2);
 }
 
-return Math.sqrt(sum)
+return Math.sqrt(sum);
 
 }
 
 async function autoVerify(){
 
-if(verifying || !cachedDescriptor) return
+if(verifying || !cachedDescriptor) return;
 
-verifying=true
+verifying=true;
 
-detectStatus.innerText="Memverifikasi..."
+detectStatus.innerText="Memverifikasi...";
 
-let bestMatch=null
-let minDistance=999
+let bestMatch=null;
+let minDistance=999;
 
 database.forEach(user=>{
 
-const distance=euclideanDistance(cachedDescriptor,user.descriptor)
+const distance=euclideanDistance(cachedDescriptor,user.descriptor);
 
 if(distance<minDistance){
-minDistance=distance
-bestMatch=user.nama
+minDistance=distance;
+bestMatch=user.nama;
 }
 
-})
+});
 
 if(minDistance<0.6){
-showResult("MATCH : "+bestMatch,"success")
+
+showResult("MATCH : "+bestMatch,"success");
+
 }else{
-showResult("Wajah tidak dikenali","fail")
-}
 
-setTimeout(()=>{verifying=false},2000)
+showResult("Wajah tidak dikenali","fail");
 
 }
 
-function showResult(text,type){
+setTimeout(()=>{
+verifying=false;
+},2000);
 
-resultBox.style.display="block"
-resultBox.innerText=text
+}
 
-resultBox.classList.remove("result-success","result-fail")
+/* TAMBAH WAJAH */
 
-if(type==="success") resultBox.classList.add("result-success")
-if(type==="fail") resultBox.classList.add("result-fail")
+async function enroll(){
 
-setTimeout(()=>{resultBox.style.display="none"},3000)
+const nama=document.getElementById("nama").value;
+
+if(!nama){
+alert("Isi nama dulu");
+return;
+}
+
+if(!cachedDescriptor){
+alert("Posisikan wajah dulu sampai terdeteksi");
+return;
+}
+
+fetch(GAS_URL,{
+method:"POST",
+mode:"no-cors",
+body:JSON.stringify({
+mode:"enroll",
+nama:nama,
+descriptor:cachedDescriptor
+})
+});
+
+showResult("Wajah berhasil ditambahkan","success");
 
 }
 
