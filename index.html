@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Face Recognition Pro</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0"></script>
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <style>
@@ -265,6 +264,7 @@ cursor:pointer;
 <div class="form-area" id="enrollForm">
 
 <input type="text" id="nama" placeholder="Masukkan Nama">
+
 <button onclick="enroll()">Tambah Wajah</button>
 
 </div>
@@ -290,17 +290,10 @@ let database=[];
 let verifying=false;
 let cachedDescriptor=null;
 
-/* LIVENESS MODEL */
+/* BLINK VARIABLES */
 
-let livenessModel;
-let lastLivenessCheck=0;
-let livenessPassed=false;
-
-/* BLINK */
-
-let blinkDetected=false;
+let blinkCount=0;
 let eyeClosedFrames=0;
-let livenessFrames=0;
 
 function eyeAspectRatio(eye){
 
@@ -318,13 +311,17 @@ navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 function switchTab(tab){
 
 if(tab==="verify"){
+
 tabVerify.classList.add("active");
 tabEnroll.classList.remove("active");
 enrollForm.style.display="none";
+
 }else{
+
 tabVerify.classList.remove("active");
 tabEnroll.classList.add("active");
 enrollForm.style.display="flex";
+
 }
 
 }
@@ -343,21 +340,11 @@ setTimeout(()=>{resultBox.style.display="none";},3000);
 
 }
 
-/* LOAD LIVENESS MODEL */
-
-async function loadLivenessModel(){
-livenessModel = await tf.loadGraphModel("./liveness/model.json");
-}
-
-/* LOAD ALL MODELS */
-
 async function loadModels(){
 
 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-
-await loadLivenessModel();
 
 let response=await fetch(GAS_URL);
 database=await response.json();
@@ -369,39 +356,6 @@ startFaceDetection();
 }
 
 loadModels();
-
-/* LIVENESS CHECK */
-
-async function checkLiveness(){
-
-if(Date.now()-lastLivenessCheck<800){
-return livenessPassed;
-}
-
-lastLivenessCheck=Date.now();
-
-const canvas=document.createElement("canvas");
-canvas.width=128;
-canvas.height=128;
-
-const ctx=canvas.getContext("2d");
-ctx.drawImage(video,0,0,128,128);
-
-const img=tf.browser.fromPixels(canvas)
-.resizeBilinear([128,128])
-.toFloat()
-.div(255)
-.expandDims(0);
-
-const prediction=await livenessModel.predict(img).data();
-
-const score=prediction[0];
-
-livenessPassed = score>0.6;
-
-return livenessPassed;
-
-}
 
 const detectorOptions=new faceapi.TinyFaceDetectorOptions({
 inputSize:128,
@@ -426,13 +380,8 @@ faceFrame.classList.add("active");
 const percent=Math.round(full.detection.score*100);
 
 confidenceBox.innerText="Confidence "+percent+"%";
-detectStatus.innerText="Wajah terdeteksi";
 
-livenessFrames++;
-
-if(percent>=75){
-
-confidenceBox.classList.add("conf-green");
+detectStatus.innerText="Silakan kedipkan mata";
 
 const leftEye=full.landmarks.getLeftEye();
 const rightEye=full.landmarks.getRightEye();
@@ -440,29 +389,30 @@ const rightEye=full.landmarks.getRightEye();
 const ear=(eyeAspectRatio(leftEye)+eyeAspectRatio(rightEye))/2;
 
 if(ear<0.26){
+
 eyeClosedFrames++;
+
 }else{
 
-if(eyeClosedFrames>0){
-blinkDetected=true;
+if(eyeClosedFrames>1){
+
+blinkCount++;
+
 }
 
 eyeClosedFrames=0;
 
 }
 
-const live=await checkLiveness();
+if(blinkCount>=1){
 
-if((blinkDetected||livenessFrames>20) && live){
+detectStatus.innerText="Memverifikasi wajah...";
 
 cachedDescriptor=Array.from(full.descriptor);
 
 autoVerify();
 
-blinkDetected=false;
-livenessFrames=0;
-
-}
+blinkCount=0;
 
 }
 
@@ -471,9 +421,8 @@ livenessFrames=0;
 faceFrame.classList.remove("active");
 
 confidenceBox.innerText="Confidence 0%";
-detectStatus.innerText="Tidak ada wajah";
 
-confidenceBox.classList.remove("conf-green");
+detectStatus.innerText="Tidak ada wajah";
 
 }
 
@@ -505,8 +454,6 @@ if(verifying || !cachedDescriptor) return;
 
 verifying=true;
 
-detectStatus.innerText="Memverifikasi...";
-
 let bestMatch=null;
 let minDistance=999;
 
@@ -522,9 +469,13 @@ bestMatch=user.nama;
 });
 
 if(minDistance<0.6){
+
 showResult("MATCH : "+bestMatch,"success");
+
 }else{
+
 showResult("Wajah tidak dikenali","fail");
+
 }
 
 setTimeout(()=>{
