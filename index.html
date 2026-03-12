@@ -110,7 +110,7 @@ background:black;
 transform:scaleX(-1);
 }
 
-/* FRAME WAJAH */
+/* FRAME */
 
 .face-frame{
 position:absolute;
@@ -121,9 +121,6 @@ border-radius:20px;
 pointer-events:none;
 box-shadow:0 0 25px #00e5ff;
 transition:0.3s;
-display:flex;
-justify-content:center;
-align-items:center;
 overflow:hidden;
 }
 
@@ -155,7 +152,7 @@ opacity:1;
 100%{top:100%;}
 }
 
-/* INFO BOX */
+/* INFO */
 
 .frame-info{
 position:absolute;
@@ -202,7 +199,6 @@ font-size:16px;
 border:2px solid #00e5ff;
 z-index:10;
 display:none;
-white-space:nowrap;
 }
 
 .result-success{
@@ -306,25 +302,28 @@ let database=[];
 let verifying=false;
 let cachedDescriptor=null;
 
+/* ANTI SPOOF */
+
+let blinkDetected=false;
+let eyeClosed=false;
+
+let headMoveDetected=false;
+let lastNoseX=null;
+let lastNoseY=null;
+
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 .then(stream=>{video.srcObject=stream;});
 
 function switchTab(tab){
 
 if(tab==="verify"){
-
 tabVerify.classList.add("active");
 tabEnroll.classList.remove("active");
-
 enrollForm.style.display="none";
-
 }else{
-
 tabVerify.classList.remove("active");
 tabEnroll.classList.add("active");
-
 enrollForm.style.display="flex";
-
 }
 
 }
@@ -360,11 +359,52 @@ startFaceDetection();
 
 loadModels();
 
-const detectorOptions=
-new faceapi.TinyFaceDetectorOptions({
-inputSize:128,
-scoreThreshold:0.5
-});
+const detectorOptions=new faceapi.TinyFaceDetectorOptions({inputSize:128,scoreThreshold:0.5});
+
+function detectBlink(landmarks){
+
+const leftEye=landmarks.getLeftEye();
+const rightEye=landmarks.getRightEye();
+
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+
+function EAR(eye){
+const A=dist(eye[1],eye[5]);
+const B=dist(eye[2],eye[4]);
+const C=dist(eye[0],eye[3]);
+return (A+B)/(2*C);
+}
+
+const ear=(EAR(leftEye)+EAR(rightEye))/2;
+
+if(ear<0.20) eyeClosed=true;
+
+if(eyeClosed && ear>0.27){
+blinkDetected=true;
+eyeClosed=false;
+}
+
+}
+
+function detectHeadMove(landmarks){
+
+const nose=landmarks.getNose()[3];
+
+if(lastNoseX!==null){
+
+const dx=Math.abs(nose.x-lastNoseX);
+const dy=Math.abs(nose.y-lastNoseY);
+
+if(dx>5 || dy>5){
+headMoveDetected=true;
+}
+
+}
+
+lastNoseX=nose.x;
+lastNoseY=nose.y;
+
+}
 
 async function startFaceDetection(){
 
@@ -396,7 +436,23 @@ const full=await faceapi
 
 if(full){
 
+detectBlink(full.landmarks);
+detectHeadMove(full.landmarks);
+
+if(!blinkDetected){
+detectStatus.innerText="Silakan kedipkan mata";
+requestAnimationFrame(detect);
+return;
+}
+
+if(!headMoveDetected){
+detectStatus.innerText="Gerakkan kepala sedikit";
+requestAnimationFrame(detect);
+return;
+}
+
 cachedDescriptor=Array.from(full.descriptor);
+
 autoVerify();
 
 }
@@ -459,22 +515,17 @@ bestMatch=user.nama;
 });
 
 if(minDistance<0.6){
-
 showResult("MATCH : "+bestMatch,"success");
-
 }else{
-
 showResult("Wajah tidak dikenali","fail");
-
 }
 
-setTimeout(()=>{
-verifying=false;
-},2000);
+blinkDetected=false;
+headMoveDetected=false;
+
+setTimeout(()=>{verifying=false;},2000);
 
 }
-
-/* TAMBAH WAJAH */
 
 async function enroll(){
 
@@ -505,6 +556,5 @@ showResult("Wajah berhasil ditambahkan","success");
 }
 
 </script>
-
 </body>
 </html>
