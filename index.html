@@ -20,7 +20,7 @@ display:flex;
 justify-content:center;
 }
 
-/* LOADING SCREEN */
+/* LOADING */
 
 #loadingScreen{
 position:fixed;
@@ -53,7 +53,6 @@ animation:spin 1s linear infinite;
 .loadingText{
 margin-top:15px;
 color:#00e5ff;
-font-size:16px;
 }
 
 /* APP */
@@ -78,9 +77,12 @@ position:relative;
 flex:1;
 padding:15px;
 display:flex;
-justify-content:center;
+flex-direction:column;
 align-items:center;
+justify-content:center;
 }
+
+/* VIDEO */
 
 video{
 width:100%;
@@ -88,6 +90,8 @@ border-radius:20px;
 background:black;
 transform:scaleX(-1);
 }
+
+/* FRAME WAJAH */
 
 .face-frame{
 position:absolute;
@@ -100,7 +104,7 @@ box-shadow:0 0 25px #00e5ff;
 transition:0.3s;
 display:flex;
 justify-content:center;
-align-items:flex-end;
+align-items:center;
 overflow:hidden;
 }
 
@@ -131,16 +135,17 @@ opacity:1;
 100%{top:100%;}
 }
 
+/* INFO BOX DI LUAR FRAME */
+
 .frame-info{
-position:absolute;
-bottom:10px;
+margin-top:15px;
 display:flex;
 flex-direction:column;
 align-items:center;
-gap:3px;
-font-size:13px;
+gap:4px;
+font-size:14px;
 background:rgba(0,0,0,0.6);
-padding:6px 10px;
+padding:8px 14px;
 border-radius:10px;
 border:1px solid #00e5ff;
 }
@@ -155,9 +160,11 @@ color:#00ff7b;
 }
 
 #detectStatus{
-font-size:12px;
+font-size:13px;
 color:#cbd5f5;
 }
+
+/* RESULT */
 
 .result-box{
 position:absolute;
@@ -190,8 +197,6 @@ color:#ff4d4d;
 
 <body>
 
-<!-- LOADING SCREEN -->
-
 <div id="loadingScreen">
 <div class="spinner"></div>
 <div class="loadingText">Loading AI Model...</div>
@@ -207,15 +212,17 @@ color:#ff4d4d;
 
 <video id="video" autoplay muted playsinline></video>
 
-<div class="face-frame" id="faceFrame">
+<!-- FRAME WAJAH -->
 
+<div class="face-frame" id="faceFrame">
 <div class="scan-line"></div>
+</div>
+
+<!-- INFO DI LUAR FRAME -->
 
 <div class="frame-info">
 <div id="confidenceBox">Confidence 0%</div>
 <div id="detectStatus">Tidak ada wajah</div>
-</div>
-
 </div>
 
 </div>
@@ -236,8 +243,6 @@ const MODEL_URL="./models";
 let database=[];
 let verifying=false;
 let cachedDescriptor=null;
-
-/* KAMERA TETAP SEPERTI ASLI */
 
 navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
 .then(stream=>{video.srcObject=stream;});
@@ -264,8 +269,6 @@ await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 
 let response=await fetch(GAS_URL);
 database=await response.json();
-
-/* HIDE LOADING */
 
 document.getElementById("loadingScreen").style.display="none";
 
