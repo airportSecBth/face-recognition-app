@@ -20,6 +20,43 @@ display:flex;
 justify-content:center;
 }
 
+/* LOADING */
+
+#loadingScreen{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#0f172a;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+z-index:999;
+}
+
+.spinner{
+width:60px;
+height:60px;
+border:6px solid #1e293b;
+border-top:6px solid #00e5ff;
+border-radius:50%;
+animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
+}
+
+.loadingText{
+margin-top:15px;
+color:#00e5ff;
+}
+
+/* APP */
+
 .app{
 width:100%;
 max-width:500px;
@@ -35,7 +72,7 @@ font-size:22px;
 font-weight:bold;
 }
 
-/* TABS */
+/* TAB */
 
 .tabs{
 display:flex;
@@ -44,7 +81,7 @@ background:#020617;
 
 .tab{
 flex:1;
-padding:15px;
+padding:14px;
 text-align:center;
 cursor:pointer;
 border-bottom:3px solid transparent;
@@ -73,7 +110,7 @@ background:black;
 transform:scaleX(-1);
 }
 
-/* FACE FRAME */
+/* FRAME WAJAH */
 
 .face-frame{
 position:absolute;
@@ -122,7 +159,7 @@ opacity:1;
 
 .frame-info{
 position:absolute;
-bottom:20px;
+top:calc(50% + 160px);
 left:50%;
 transform:translateX(-50%);
 display:flex;
@@ -150,7 +187,7 @@ font-size:13px;
 color:#cbd5f5;
 }
 
-/* RESULT TOP */
+/* RESULT */
 
 .result-box{
 position:absolute;
@@ -178,43 +215,30 @@ border-color:#ff4d4d;
 color:#ff4d4d;
 }
 
-/* CONTROLS */
+/* FORM */
 
-.controls{
-padding:20px;
-background:#111827;
-border-top-left-radius:25px;
-border-top-right-radius:25px;
+.form-area{
+padding:15px;
+display:none;
+flex-direction:column;
+gap:10px;
 }
 
 input{
-width:100%;
-padding:15px;
+padding:12px;
 border:none;
-border-radius:12px;
-font-size:16px;
-margin-bottom:15px;
+border-radius:10px;
+font-size:15px;
 }
 
 button{
-width:100%;
-padding:16px;
+padding:14px;
 border:none;
 border-radius:12px;
-font-size:16px;
+background:#00c853;
+color:white;
 font-weight:bold;
-margin-bottom:10px;
 cursor:pointer;
-}
-
-.enroll{background:#00c853;color:white;}
-.verify{background:#2962ff;color:white;}
-
-.status{
-text-align:center;
-margin-top:10px;
-font-weight:bold;
-min-height:24px;
 }
 
 </style>
@@ -222,13 +246,18 @@ min-height:24px;
 
 <body>
 
+<div id="loadingScreen">
+<div class="spinner"></div>
+<div class="loadingText">Loading AI Model...</div>
+</div>
+
 <div class="app">
 
 <div class="header">Face Recognition Pro</div>
 
 <div class="tabs">
-<div class="tab active" onclick="switchTab('verify')" id="tabVerify">Verifikasi</div>
-<div class="tab" onclick="switchTab('enroll')" id="tabEnroll">Tambah Wajah</div>
+<div class="tab active" id="tabVerify" onclick="switchTab('verify')">Verifikasi</div>
+<div class="tab" id="tabEnroll" onclick="switchTab('enroll')">Tambah Wajah</div>
 </div>
 
 <div class="video-wrapper">
@@ -243,23 +272,16 @@ min-height:24px;
 
 <div class="frame-info">
 <div id="confidenceBox">Confidence 0%</div>
-<div id="detectStatus">Menunggu kamera...</div>
+<div id="detectStatus">Tidak ada wajah</div>
 </div>
 
 </div>
 
-<div class="controls">
+<div class="form-area" id="enrollForm">
 
-<div id="verifySection">
-<button class="verify" onclick="verify()">Verifikasi Wajah</button>
-</div>
-
-<div id="enrollSection" style="display:none;">
 <input type="text" id="nama" placeholder="Masukkan Nama">
-<button class="enroll" onclick="enroll()">Tambah Wajah</button>
-</div>
 
-<div class="status" id="status">Loading model...</div>
+<button onclick="enroll()">Tambah Wajah</button>
 
 </div>
 
@@ -272,49 +294,40 @@ const faceFrame=document.getElementById("faceFrame");
 const confidenceBox=document.getElementById("confidenceBox");
 const detectStatus=document.getElementById("detectStatus");
 const resultBox=document.getElementById("resultBox");
-const statusText=document.getElementById("status");
-
-const verifySection=document.getElementById("verifySection");
-const enrollSection=document.getElementById("enrollSection");
 
 const tabVerify=document.getElementById("tabVerify");
 const tabEnroll=document.getElementById("tabEnroll");
+const enrollForm=document.getElementById("enrollForm");
 
-const GAS_URL="YOUR_GAS_URL";
+const GAS_URL="https://script.google.com/macros/s/AKfycbwvBwwb_H4yp2gE6k97yabfPHAgd-IhLZMfVeX6iaqE6KUlxltdHCTGpc0tM9cIY6rj/exec";
 const MODEL_URL="./models";
 
 let database=[];
 let verifying=false;
 let cachedDescriptor=null;
-let currentTab="verify";
 
-/* SWITCH TAB */
+navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
+.then(stream=>{video.srcObject=stream;});
 
 function switchTab(tab){
 
-currentTab=tab;
-
 if(tab==="verify"){
-
-verifySection.style.display="block";
-enrollSection.style.display="none";
 
 tabVerify.classList.add("active");
 tabEnroll.classList.remove("active");
 
-}else{
+enrollForm.style.display="none";
 
-verifySection.style.display="none";
-enrollSection.style.display="block";
+}else{
 
 tabVerify.classList.remove("active");
 tabEnroll.classList.add("active");
 
-}
+enrollForm.style.display="flex";
 
 }
 
-/* RESULT */
+}
 
 function showResult(text,type){
 
@@ -326,18 +339,9 @@ resultBox.classList.remove("result-success","result-fail");
 if(type==="success") resultBox.classList.add("result-success");
 if(type==="fail") resultBox.classList.add("result-fail");
 
-setTimeout(()=>{
-resultBox.style.display="none";
-},3000);
+setTimeout(()=>{resultBox.style.display="none";},3000);
 
 }
-
-/* CAMERA */
-
-navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-.then(stream=>{video.srcObject=stream;});
-
-/* LOAD MODELS */
 
 async function loadModels(){
 
@@ -348,7 +352,7 @@ await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 let response=await fetch(GAS_URL);
 database=await response.json();
 
-statusText.innerText="Siap digunakan";
+document.getElementById("loadingScreen").style.display="none";
 
 startFaceDetection();
 
@@ -356,16 +360,19 @@ startFaceDetection();
 
 loadModels();
 
-/* DETECTION */
+const detectorOptions=
+new faceapi.TinyFaceDetectorOptions({
+inputSize:128,
+scoreThreshold:0.5
+});
 
 async function startFaceDetection(){
 
 async function detect(){
 
-const detection=await faceapi.detectSingleFace(
-video,
-new faceapi.TinyFaceDetectorOptions({inputSize:128})
-);
+if(!verifying){
+
+const detection=await faceapi.detectSingleFace(video,detectorOptions);
 
 if(detection){
 
@@ -376,17 +383,20 @@ const percent=Math.round(detection.score*100);
 confidenceBox.innerText="Confidence "+percent+"%";
 detectStatus.innerText="Wajah terdeteksi";
 
-if(percent>=75 && currentTab==="verify" && !verifying){
+confidenceBox.classList.remove("conf-green");
+
+if(percent>=75){
+
+confidenceBox.classList.add("conf-green");
 
 const full=await faceapi
-.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
+.detectSingleFace(video,detectorOptions)
 .withFaceLandmarks()
 .withFaceDescriptor();
 
 if(full){
 
 cachedDescriptor=Array.from(full.descriptor);
-
 autoVerify();
 
 }
@@ -400,6 +410,10 @@ faceFrame.classList.remove("active");
 confidenceBox.innerText="Confidence 0%";
 detectStatus.innerText="Tidak ada wajah";
 
+confidenceBox.classList.remove("conf-green");
+
+}
+
 }
 
 requestAnimationFrame(detect);
@@ -409,8 +423,6 @@ requestAnimationFrame(detect);
 detect();
 
 }
-
-/* DISTANCE */
 
 function euclideanDistance(d1,d2){
 
@@ -423,8 +435,6 @@ sum+=Math.pow(d1[i]-d2[i],2);
 return Math.sqrt(sum);
 
 }
-
-/* AUTO VERIFY */
 
 async function autoVerify(){
 
@@ -458,41 +468,27 @@ showResult("Wajah tidak dikenali","fail");
 
 }
 
-setTimeout(()=>{verifying=false;},2000);
+setTimeout(()=>{
+verifying=false;
+},2000);
 
 }
 
-/* GET DESCRIPTOR */
-
-async function getDescriptor(){
-
-const detection=await faceapi
-.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
-.withFaceLandmarks()
-.withFaceDescriptor();
-
-if(!detection){
-statusText.innerText="Wajah tidak terdeteksi";
-return null;
-}
-
-return Array.from(detection.descriptor);
-
-}
-
-/* ENROLL */
+/* TAMBAH WAJAH */
 
 async function enroll(){
 
 const nama=document.getElementById("nama").value;
 
 if(!nama){
-statusText.innerText="Isi nama dulu";
+alert("Isi nama dulu");
 return;
 }
 
-const descriptor=await getDescriptor();
-if(!descriptor) return;
+if(!cachedDescriptor){
+alert("Posisikan wajah dulu sampai terdeteksi");
+return;
+}
 
 fetch(GAS_URL,{
 method:"POST",
@@ -500,19 +496,11 @@ mode:"no-cors",
 body:JSON.stringify({
 mode:"enroll",
 nama:nama,
-descriptor:descriptor
+descriptor:cachedDescriptor
 })
 });
 
 showResult("Wajah berhasil ditambahkan","success");
-
-}
-
-/* VERIFY BUTTON */
-
-async function verify(){
-
-autoVerify();
 
 }
 
