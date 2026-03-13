@@ -40,6 +40,7 @@ button{padding:14px;border:none;border-radius:12px;background:#00c853;color:whit
 </style>
 </head>
 <body>
+
 <div id="loadingScreen">
     <div class="spinner"></div>
     <div class="loadingText">Loading AI Model...</div>
@@ -87,15 +88,22 @@ const MODEL_URL = "./models";
 let database = [];
 let verifying = false;
 let cachedDescriptor = null;
-let enrollDescriptors = []; 
+let enrollDescriptors = [];
 let poseValidated = false;
 
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
 .then(stream => { video.srcObject = stream; });
 
 function switchTab(tab){
-    if(tab==="verify"){ tabVerify.classList.add("active"); tabEnroll.classList.remove("active"); enrollForm.style.display="none"; }
-    else { tabVerify.classList.remove("active"); tabEnroll.classList.add("active"); enrollForm.style.display="flex"; }
+    if(tab==="verify"){
+        tabVerify.classList.add("active");
+        tabEnroll.classList.remove("active");
+        enrollForm.style.display="none";
+    }else{
+        tabVerify.classList.remove("active");
+        tabEnroll.classList.add("active");
+        enrollForm.style.display="flex";
+    }
 }
 
 function showResult(text,type){
@@ -117,57 +125,55 @@ async function loadModels(){
     document.getElementById("loadingScreen").style.display="none";
     startFaceDetection();
 }
+
 loadModels();
 
 const detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize:128, scoreThreshold:0.5 });
 
-// Fungsi cek kepala miring ke kiri
-function checkHeadPose(full){
-    const leftEye = full.landmarks.getLeftEye();
-    const rightEye = full.landmarks.getRightEye();
-    const nose = full.landmarks.getNose();
-    const eyeDistance = rightEye[3].x - leftEye[0].x;
-    const noseShift = nose[3].x - (leftEye[0].x + eyeDistance/2);
-    const yaw = noseShift / eyeDistance; // negatif = kiri
-    if(yaw < -0.15){
-        poseValidated = true;
-        detectStatus.innerText = "Kepala miring kiri ✅";
-    } else{
-        poseValidated = false;
-        detectStatus.innerText = "Arahkan kepala ke kiri ⬅️";
-    }
-}
-
 async function startFaceDetection(){
     async function detect(){
-        const detection = await faceapi.detectSingleFace(video,detectorOptions)
+        if(!verifying){
+            const detection = await faceapi.detectSingleFace(video,detectorOptions)
                                     .withFaceLandmarks()
                                     .withFaceDescriptor();
-        if(detection){
-            faceFrame.classList.add("active");
-            cachedDescriptor = Array.from(detection.descriptor);
 
-            // Validasi kepala miring ke kiri
-            checkHeadPose(detection);
+            if(detection){
+                faceFrame.classList.add("active");
 
-            const percent = Math.round(detection.score*100);
-            confidenceBox.innerText="Confidence "+percent+"%";
+                const score = detection.detection.score || 0;
+                const percent = Math.round(score*100);
+                confidenceBox.innerText = "Confidence "+percent+"%";
+                detectStatus.innerText = "Wajah terdeteksi";
+                confidenceBox.classList.remove("conf-green");
+                if(percent>=75) confidenceBox.classList.add("conf-green");
 
-            if(percent>=75) confidenceBox.classList.add("conf-green");
-            else confidenceBox.classList.remove("conf-green");
+                cachedDescriptor = Array.from(detection.descriptor);
 
-            // Auto verify hanya jika pose valid
-            if(poseValidated && !verifying){
-                autoVerify();
+                // ✅ Validasi kepala miring ke kiri
+                const landmarks = detection.landmarks;
+                const leftEye = landmarks.getLeftEye();
+                const rightEye = landmarks.getRightEye();
+                const dx = rightEye[0].x - leftEye[0].x;
+                const dy = rightEye[0].y - leftEye[0].y;
+                const angle = Math.atan2(dy, dx) * (180/Math.PI);
+
+                if(angle < -10){ // kepala miring ke kiri minimal -10 derajat
+                    poseValidated = true;
+                    detectStatus.innerText = "Pose valid: kepala miring kiri";
+                    autoVerify();
+                }else{
+                    poseValidated = false;
+                    detectStatus.innerText = "Miringkan kepala ke kiri";
+                }
+
+            }else{
+                faceFrame.classList.remove("active");
+                confidenceBox.innerText = "Confidence 0%";
+                confidenceBox.classList.remove("conf-green");
+                detectStatus.innerText = "Tidak ada wajah";
+                cachedDescriptor = null;
+                poseValidated = false;
             }
-
-        }else{
-            faceFrame.classList.remove("active");
-            cachedDescriptor = null;
-            poseValidated = false;
-            confidenceBox.innerText="Confidence 0%";
-            confidenceBox.classList.remove("conf-green");
-            detectStatus.innerText = "Tidak ada wajah";
         }
         requestAnimationFrame(detect);
     }
@@ -181,7 +187,7 @@ function euclideanDistance(d1,d2){
 }
 
 async function autoVerify(){
-    if(verifying || !cachedDescriptor) return;
+    if(verifying || !cachedDescriptor || !poseValidated) return;
     verifying=true;
     detectStatus.innerText="Memverifikasi...";
     let bestMatch=null;
@@ -206,11 +212,11 @@ async function autoVerify(){
     setTimeout(()=>{ verifying=false; },2000);
 }
 
-/* TAMBAH WAJAH MULTI-ENROLL 3X */
+/* Multi-enroll 3x */
 async function enroll(){
     const nama = document.getElementById("nama").value;
     if(!nama){ alert("Isi nama dulu"); return; }
-    if(!cachedDescriptor){ alert("Posisikan kepala miring kiri dulu"); return; }
+    if(!cachedDescriptor){ alert("Posisikan wajah dulu sampai terdeteksi"); return; }
 
     enrollDescriptors.push(Array.from(cachedDescriptor));
     document.getElementById("enrollCounter").innerText = `${enrollDescriptors.length} / 3`;
