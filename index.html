@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Face Recognition Pro - Pose Left Only</title>
+<title>Face Recognition Pro</title>
 
 <script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
@@ -58,7 +58,8 @@ button{padding:14px;border:none;border-radius:12px;background:#00c853;color:whit
         <video id="video" autoplay muted playsinline></video>
         <div class="face-frame" id="faceFrame"><div class="scan-line"></div></div>
         <div class="frame-info">
-            <div id="detectStatus">Arahkan kepala ke kiri</div>
+            <div id="confidenceBox">Confidence 0%</div>
+            <div id="detectStatus">Tidak ada wajah</div>
         </div>
     </div>
 
@@ -72,6 +73,7 @@ button{padding:14px;border:none;border-radius:12px;background:#00c853;color:whit
 <script>
 const video = document.getElementById("video");
 const faceFrame = document.getElementById("faceFrame");
+const confidenceBox = document.getElementById("confidenceBox");
 const detectStatus = document.getElementById("detectStatus");
 const resultBox = document.getElementById("resultBox");
 
@@ -85,7 +87,7 @@ const MODEL_URL = "./models";
 let database = [];
 let verifying = false;
 let cachedDescriptor = null;
-let enrollDescriptors = [];
+let enrollDescriptors = []; 
 let poseValidated = false;
 
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
@@ -119,13 +121,14 @@ loadModels();
 
 const detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize:128, scoreThreshold:0.5 });
 
+// Fungsi cek kepala miring ke kiri
 function checkHeadPose(full){
     const leftEye = full.landmarks.getLeftEye();
     const rightEye = full.landmarks.getRightEye();
     const nose = full.landmarks.getNose();
     const eyeDistance = rightEye[3].x - leftEye[0].x;
     const noseShift = nose[3].x - (leftEye[0].x + eyeDistance/2);
-    const yaw = noseShift / eyeDistance;
+    const yaw = noseShift / eyeDistance; // negatif = kiri
     if(yaw < -0.15){
         poseValidated = true;
         detectStatus.innerText = "Kepala miring kiri ✅";
@@ -143,15 +146,28 @@ async function startFaceDetection(){
         if(detection){
             faceFrame.classList.add("active");
             cachedDescriptor = Array.from(detection.descriptor);
+
+            // Validasi kepala miring ke kiri
             checkHeadPose(detection);
+
+            const percent = Math.round(detection.score*100);
+            confidenceBox.innerText="Confidence "+percent+"%";
+
+            if(percent>=75) confidenceBox.classList.add("conf-green");
+            else confidenceBox.classList.remove("conf-green");
+
+            // Auto verify hanya jika pose valid
             if(poseValidated && !verifying){
                 autoVerify();
             }
-        } else {
+
+        }else{
             faceFrame.classList.remove("active");
             cachedDescriptor = null;
             poseValidated = false;
-            detectStatus.innerText = "Arahkan kepala ke kiri ⬅️";
+            confidenceBox.innerText="Confidence 0%";
+            confidenceBox.classList.remove("conf-green");
+            detectStatus.innerText = "Tidak ada wajah";
         }
         requestAnimationFrame(detect);
     }
@@ -170,6 +186,7 @@ async function autoVerify(){
     detectStatus.innerText="Memverifikasi...";
     let bestMatch=null;
     let minDistance=999;
+
     database.forEach(user=>{
         user.descriptors.forEach(d=>{
             const distance = euclideanDistance(cachedDescriptor,d);
@@ -179,11 +196,13 @@ async function autoVerify(){
             }
         });
     });
+
     if(minDistance<0.5){
         showResult("MATCH : "+bestMatch,"success");
-    } else {
+    }else{
         showResult("Wajah tidak dikenali","fail");
     }
+
     setTimeout(()=>{ verifying=false; },2000);
 }
 
@@ -207,7 +226,7 @@ async function enroll(){
             })
         });
         showResult("3 Wajah berhasil ditambahkan","success");
-        enrollDescriptors=[];
+        enrollDescriptors=[]; 
         document.getElementById("enrollCounter").innerText = "0 / 3";
     }else{
         showResult(`Wajah ${enrollDescriptors.length} disimpan sementara`,"success");
