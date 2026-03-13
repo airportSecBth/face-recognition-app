@@ -91,6 +91,9 @@ let cachedDescriptor = null;
 let enrollDescriptors = [];
 let poseValidated = false;
 
+let mouthState = "closed"; // awal mulut tertutup
+let openCloseCycle = false;
+
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
 .then(stream => { video.srcObject = stream; });
 
@@ -149,21 +152,34 @@ async function startFaceDetection(){
 
                 cachedDescriptor = Array.from(detection.descriptor);
 
-                // ✅ Validasi kepala miring kiri (koreksi mirror kamera)
+                // ✅ Validasi mulut buka-tutup
                 const landmarks = detection.landmarks;
-                const leftEye = landmarks.getLeftEye();
-                const rightEye = landmarks.getRightEye();
-                const dx = rightEye[0].x - leftEye[0].x;
-                const dy = rightEye[0].y - leftEye[0].y;
-                const angle = Math.atan2(dy, dx) * (180/Math.PI);
+                const mouth = landmarks.getMouth();
+                const topLip = mouth[13]; // bibir atas tengah
+                const bottomLip = mouth[19]; // bibir bawah tengah
+                const mouthHeight = bottomLip.y - topLip.y;
 
-                if(angle > 10){ // Kepala miring kiri user -> angle > 10 karena mirror
+                const thresholdOpen = 15; // px
+                if(mouthHeight > thresholdOpen){
+                    if(mouthState === "closed"){
+                        mouthState = "open";
+                    }
+                }else{
+                    if(mouthState === "open"){
+                        mouthState = "closed";
+                        openCloseCycle = true; // siklus selesai
+                    }
+                }
+
+                if(openCloseCycle){
                     poseValidated = true;
-                    detectStatus.innerText = "Pose valid: kepala miring kiri";
+                    detectStatus.innerText = "Pose valid: mulut buka-tutup";
                     autoVerify();
+                    openCloseCycle = false; // reset untuk siklus berikutnya
                 }else{
                     poseValidated = false;
-                    detectStatus.innerText = "Miringkan kepala ke kiri";
+                    if(mouthState==="closed") detectStatus.innerText="Buka mulut";
+                    else detectStatus.innerText="Tutup mulut";
                 }
 
             }else{
@@ -173,6 +189,8 @@ async function startFaceDetection(){
                 detectStatus.innerText = "Tidak ada wajah";
                 cachedDescriptor = null;
                 poseValidated = false;
+                mouthState = "closed";
+                openCloseCycle = false;
             }
         }
         requestAnimationFrame(detect);
