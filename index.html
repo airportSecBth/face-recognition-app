@@ -121,6 +121,17 @@ function showResult(text,type){
     setTimeout(()=>{ resultBox.style.display="none"; },3000);
 }
 
+async function startCamera(){
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        console.log("Camera started");
+    } catch (err) {
+        console.error("Camera error:", err);
+        alert("Kamera gagal: " + err.message);
+    }
+}    
+
 async function loadModels(){
     await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
