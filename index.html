@@ -224,14 +224,24 @@ async function autoVerify(){
         });
     });
 
-    if(minDistance<0.5){
-        showResult("MATCH : "+bestMatch,"success");
-        // ✅ INI BAGIAN CALLBACK BALIK KE GAS
-        if(callback){
-            setTimeout(()=>{
-                window.location.href = callback + "?page=menu";
-            }, 1500);
+    if(minDistance < 0.5){
+        showResult("MATCH : " + bestMatch, "success");
+    
+        // kirim ke GAS tab utama
+        const params = new URLSearchParams(window.location.search);
+        const callback = params.get("callback");
+    
+        if (window.opener) {
+            window.opener.postMessage({
+                status: "success",
+                name: bestMatch
+            }, "*");
         }
+    
+        // tutup tab face
+        setTimeout(() => {
+            window.close();
+        }, 1500);
     }else{
         showResult("Wajah tidak dikenali","fail");
     }
